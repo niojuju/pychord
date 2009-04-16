@@ -9,22 +9,11 @@ from pychord import *
 
 
 
-EDGE_COLOR = (1,1,1)
-NODE_COLOR = (0,1,0)
-
-
+EDGE_COLOR = (1,1,1, 0.3)
+NODE_COLOR = (0,1,0, 1)
 
 
 STEP_TIME = 1.0
-
-
-
-
-
-
-
-
-
 
 
 
@@ -59,7 +48,7 @@ class ChordWindow(Window):
 
    def __init__(self, chord):
       config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
-      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=True)
+      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=False)
    
       #the chord model
       self.chord = chord
@@ -87,7 +76,7 @@ class ChordWindow(Window):
       if symbol == key.ESCAPE:
          pyglet.app.exit()
       elif symbol == key.SPACE:
-         print "tick", self.chord.t 
+         #print "tick", self.chord.t 
          self.chord.tick()
 
 
@@ -98,46 +87,58 @@ class ChordWindow(Window):
       self.clear()
 
       #draw connections
-      glColor3f(*EDGE_COLOR)
+      glEnable(GL_BLEND)
+      glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
+      glColor4f(*EDGE_COLOR)
       for node in self.chord.nodes:
          x,y = self.get_node_pos(node)
          for dest in node.fingers:
             x2,y2 = self.get_node_pos(dest)
-            drawLine((x,y),(x2,y2))
+            drawLine((x,y),(x2,y2), 1)
 
 
       #draw nodes
-      glColor3f(*NODE_COLOR)
+      glColor4f(*NODE_COLOR)
       for node in self.chord.nodes:
          n, size = node.id, float(SIZE)
          x,y = self.get_node_pos(n)
-         drawCircle((x,y),.2)
+         drawCircle((x,y),.05)
 
 
       #draw current messages
-      
-      print chord_messages
+      glDisable(GL_DEPTH_TEST)
+      #print chord_messages
       for node in chord_messages:
-         print "msgs of", node
+         #print "msgs of", node
          for m in chord_messages[node]:
-    
+            #print m
             if m.t > self.chord.t:
                continue #dont handle messages that are still waiing to start
 
-            glColor3f(0,0,1)
-            print self.chord.t, m.last_location, m.current_location
+            
+            #print self.chord.t, m.last_location, m.current_location
+            src = self.get_node_pos(m.src)
+            dst = self.get_node_pos(m.dest)
             fro = self.get_node_pos(m.last_location)
             to =  self.get_node_pos(m.current_location)
 
-            if m.content == "OK":
-               glColor3f(1,1,0) #direct communication/response to src
+            glColor4f(1,0,1,0.5)
+            drawLine(src,fro,3)
+            drawLine(to,dst,3)
+            glColor4f(0,1,1,0.5)
+            drawLine(src,dst,3)
 
+            glColor4f(0,0,1,1)
+            if m.content == "OK":
+               glColor4f(1,1,0,1) #direct communication/response to src
 
             drawCircle(to,.2)                     
             #drawTriangle(fro, .2,.2)
-            drawLine(fro,to,4)
+            drawLine(fro,to,3)
+            
+            
 
-      self.flip()
+      #self.flip()
 
 
 
