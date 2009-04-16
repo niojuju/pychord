@@ -1,6 +1,6 @@
 from math import log
 # maximum size of teh chord network / size fo the address space
-SIZE = 1024
+SIZE = 64
 
 
 #a global dictionary to hold the messages that are to be processed by teh nodes at this timestep
@@ -102,7 +102,8 @@ class Node:
 
          if msg.t < self.time: #dont handle events that were added this round
             if self.find_successor(msg): #returns value only if dest (successor) is reached
-               print "Home:", self, msg
+               pass
+               #print "Home:", self, msg
             consumed.append(msg)
 
       for m in consumed:
@@ -123,7 +124,7 @@ class Node:
       #route to next closest
       node = self.closest_preceding_node(msg)
       msg.t = self.time 
-      print "routing to ", node     
+      #print "routing to ", node     
       send_message(node, msg)
       msg.last_location = msg.current_location
       msg.current_location = node.id
@@ -165,24 +166,23 @@ class ChordTest:
       
       for i in range(SIZE):
          self.nodes[i].fingers = []
-         print log(SIZE,2), "links"
+         #print log(SIZE,2), "links"
          for j in range(log(SIZE,2)):
-            print "link to :", (i+(2**j))%SIZE, i, j
+            #print "link to :", (i+(2**j))%SIZE, i, j
             self.nodes[i].fingers.append(self.nodes[(i+(2**j))%SIZE])
 
 
 
       #test messages
-      send_message(self.nodes[1], Message(1,14,0)) #from 1 to 14 at t=0
-      send_message(self.nodes[35], Message(35,11,2)) #from 1 to 14 at t=0
-      send_message(self.nodes[42], Message(42,9,3)) #from 1 to 14 at t=0  
-      send_message(self.nodes[14], Message(14,8,3)) #from 1 to 14 at t=0
-      send_message(self.nodes[17], Message(17,14,5)) #from 1 to 14 at t=0    
+      from random import randint 
+      #send_message(self.nodes[1], Message(randint(1,SIZE-1),randint(1,SIZE-1),i)) #random message
+      send_message(self.nodes[1], Message(1,52,1)) #random message
+      send_message(self.nodes[1], Message(45,12,5)) #random message
       
 
    def tick(self):
       self.t += 1
-      print "tick", self.t
+     # print "tick", self.t
       for n in self.nodes:
          n.tick(self.t)
 
