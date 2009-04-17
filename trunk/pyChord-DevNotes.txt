@@ -1,0 +1,23 @@
+Iteration 1: 
+	- get a basic chord network set up with multiple send / receive operations and time-sequencing
+	- set up visualization for this 
+	
+Iteration 2:
+	- Add Join, Leave and graceless-Leave functions
+	- Refactor into 3 parts: Chord network, Visualizer and Chord Test-bench 
+ 	  (a) Chord network - consists of info about current nodes, current messages, define tick() 
+ 	  (b) Visualizer - only GUI routines, logging functions
+	  (c) Chord Test-bench - new messages (generator), churn generator, time-stepping, starts/co-ordinates (a) & (b)
+	- Where should metrics-collection go?
+	- Set up metrics-collection & display for following:
+		- Number of active/inactive nodes
+		- Min/Avg/Max length of searches
+	- Set up logging messages on GUI
+		- Message @ start-nodes, @ destination-nodes (and hops), 
+		- Joins, Leaves, 
+		- Message-deaths?/time-outs
+		  
+Iteration 3:
+	- Add probability-distribution based random-variable generation support 
+	- Add support for Adversarial churn
+  
