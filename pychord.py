@@ -28,15 +28,15 @@ def between(x, i, j):
 class Message:
 
    def __init__(self, src, dest, time_stamp, transfer_time=3, content=""):
-      self.dest = dest
-      self.src = src
-      self.init_time =time_stamp
-      self.t =time_stamp
-      self.content = content
-      self.current_location = src
-      self.last_location = src
-      self.num_hops = 0
-      self.transfer_time = transfer_time
+      self.dest = dest              
+      self.src = src                
+      self.init_time =time_stamp            # Start-time 
+      self.t = time_stamp                   # ??
+      self.content = content                # Content -- Some string msg. here
+      self.current_location = src   
+      self.last_location = src      
+      self.num_hops = 0                     # Hops till now
+      self.transfer_time = transfer_time    # Max-hops?
 
 
 
@@ -69,15 +69,12 @@ class Node:
       self.fingers = []
       self.predecessor = None
       self.time = 0
-      
 
       #the pending list will hold info so that we can remember what requests we are still waiting for
-      #when we initialize a search or join well add areminder here until we receuive ananswer
-      #we will always puta  timestamp with each request when we put it in here so that we can knwo 
-      #when to stop waiting/label teh request failed by  exceeded TTL
+      #when we initialize a search or join well add a reminder here until we receive an answer
+      #we will always put a time-stamp with each request when we put it in here so that we can know 
+      #when to stop waiting/label the request failed by exceeded TTL
       self.pending = [] 
-
-
 
    #is called at each time step during teh simulation, teh node is allowed to handle its incoming messages
    #dt = current time step
