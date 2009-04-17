@@ -3,11 +3,15 @@ Iteration 1:
 	- set up visualization for this 
 	
 Iteration 2:
-	- Add Join, Leave and graceless-Leave functions
+
 	- Refactor into 3 parts: Chord network, Visualizer and Chord Test-bench 
  	  (a) Chord network - consists of info about current nodes, current messages, define tick() 
  	  (b) Visualizer - only GUI routines, logging functions
 	  (c) Chord Test-bench - new messages (generator), churn generator, time-stepping, starts/co-ordinates (a) & (b)
+
+
+Iteration 3:
+	- Add Join, Leave and graceless-Leave functions
 	- Where should metrics-collection go?
 	- Set up metrics-collection & display for following:
 		- Number of active/inactive nodes
@@ -17,7 +21,77 @@ Iteration 2:
 		- Joins, Leaves, 
 		- Message-deaths?/time-outs
 		  
-Iteration 3:
+Iteration 4:
 	- Add probability-distribution based random-variable generation support 
 	- Add support for Adversarial churn
+        - Replication strategies
+        - Randomization for routing and search
+        
+        
+        
+        
+        
+Iteration 2 Interfaces:
+        
+Node:
+ variables:
+   ID
+   fingers/node neighboars
+
+  tick
+  find_predeccessor
+  find_successor
+  join (node to start the join at)
+  leave
   
+  
+Message:
+  src (nodeID)
+  dest (nodeID)
+  (content)
+  private:
+    timestamp
+    hops
+    status
+    
+ functions:
+  init(src, dest)
+        
+    
+    
+    
+Network:
+ member variables:
+   nodes
+   messages
+
+ funtions:
+  init(SIZE_OF_NAMESPACE=64k by default)
+  make_topology([list of nodes to join])
+  tick()
+  add_messages([m1, m2, m3, ...])
+  add_joins( [(node1, contact1), (node2, contact2), ... ] )
+  add_leaves( [n1, n2, n3, ...] )
+  add_fails( [n1, n2, n3, ...] ) 
+
+
+
+
+
+How the test cases should work in refactored model:
+
+function do_changes_at_time(t):
+  nw.add_joins([1,4,87, .])  a list of nodes that will join at teh next tick (by id of tehir ID)
+  nw.add_messages([msg1, msg2, ...])  adds a vector of messages that will be sent at the next tick
+  nw.add_leaves()
+  nw.add_fails()
+  
+#create the network first
+nw = Newtowrk(SIZE_OF_NAMESPACE) #initializes network object with 2 nodes
+do_changes_at_time(0)
+  
+while simulating:
+  nw.tick()
+  t++
+  do_changes_at_time(t)
+  #do jons/leaves/fails/ messages for this timestep

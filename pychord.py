@@ -34,7 +34,8 @@ class Message:
       self.t = time_stamp                   # ??
       self.content = content                # Content -- Some string msg. here
       self.current_location = src   
-      self.last_location = src      
+      self.last_location = src
+
       self.num_hops = 0                     # Hops till now
       self.transfer_time = transfer_time    # Max-hops?
 
@@ -98,6 +99,7 @@ class Node:
             continue
 
          if msg.t < self.time: #dont handle events that were added this round
+            msg.route.append(self.id)
             if self.find_successor(msg): #returns value only if dest (successor) is reached
                pass
                #print "Home:", self, msg
