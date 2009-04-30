@@ -3,10 +3,10 @@ from math import log
 SIZE = 64
 
 
-#a global dictionary to hold the messages that are to be processed by teh nodes at this timestep
+#a global dictionary to hold the messages that are to be processed by the nodes at this timestep
 #key = node this event is to be handled by
 #val = a list of events. each event is some sort of event description that is interpreted by teh node 
-#at each timestep the nodes will handle teh messages from teh last round and create new events for teh next round
+#at each timestep the nodes will handle teh messages from the last round and create new events for teh next round
 chord_messages = {}
 
 
@@ -38,7 +38,7 @@ class Message:
 
       self.num_hops = 0                     # Hops till now
       self.transfer_time = transfer_time    # Max-hops?
-
+      self.route = []
 
 
    def __str__(self):
@@ -108,7 +108,7 @@ class Node:
       for m in consumed:
          messages.remove(m)
 
-
+   
    #tries to route the message / find teh successor of msg.dest            
    def find_successor(self, msg):
    
@@ -120,8 +120,12 @@ class Node:
          msg.current_location = msg.src         
          return self.fingers[0].id
       
+      from pprint import pprint
       #route to next closest
       node = self.closest_preceding_node(msg)
+      print "predesessor:"
+      pprint (self.fingers)
+      print self.id,  "closest pre:", node.id
       msg.t = self.time 
       #print "routing to ", node     
       send_message(node, msg)
@@ -144,7 +148,8 @@ class Node:
    def __str__(self):
       return "Node %d (%d,%d,%d,%d)" % (self.id, self.fingers[0].id, self.fingers[1].id, self.fingers[2].id, self.fingers[3].id)
 
-
+   def __rerp__(self):
+      return self.__str__()
 
 
 
@@ -176,7 +181,7 @@ class ChordTest:
       from random import randint 
       #send_message(self.nodes[1], Message(randint(1,SIZE-1),randint(1,SIZE-1),i)) #random message
       send_message(self.nodes[1], Message(1,52,1)) #random message
-      send_message(self.nodes[1], Message(45,12,5)) #random message
+      send_message(self.nodes[1], Message(55,12,5)) #random message
       
 
    def tick(self):

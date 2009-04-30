@@ -3,6 +3,7 @@ from pyglet.window import Window, key
 from pyglet.gl import *
 from math import sin, cos, radians
 from random import randint
+from pyglet.text import Label
 
 from pychord import *
 
@@ -31,6 +32,14 @@ def drawTriangle(pos, w, h, style=GL_TRIANGLES):
       glVertex2f(points.pop(), points.pop())
     glEnd()
 
+
+def drawRectangle(pos, w, h, style=GL_QUADS):
+    points = [pos[0], pos[1], pos[0], pos[1]+h, pos[0]+w, pos[1]+h, pos[0]+w, pos[1]]
+    glBegin(GL_QUADS)
+    while len(points):
+      glVertex2f(points.pop(), points.pop())
+    glEnd()
+
 def drawCircle(pos=(0,0), radius=1.0):
    x, y = pos[0], pos[1]
    glPushMatrix()
@@ -39,7 +48,26 @@ def drawCircle(pos=(0,0), radius=1.0):
    gluDisk(gluNewQuadric(), 0, 1, 16,1)
    glPopMatrix()
 
+def drawLabel(text, pos=(0,0), **kwargs):
 
+    
+    kwargs.setdefault('font_size', 16)
+    kwargs.setdefault('center', False)
+    if kwargs.get('center'):
+        kwargs.setdefault('anchor_x', 'center')
+        kwargs.setdefault('anchor_y', 'center')
+    else:
+        kwargs.setdefault('anchor_x', 'left')
+        kwargs.setdefault('anchor_y', 'bottom')
+    del kwargs['center']
+    temp_label = Label(text, **kwargs)
+    #temp_label.x, temp_label.y = pos
+    glPushMatrix()
+    #glTranslated(-pos[0]-8.5,-pos[1]-8,0)
+    glScaled(0.02,0.02,0.02)
+    temp_label.draw()
+    glPopMatrix()
+    return temp_label.content_width
 
 
 
@@ -48,10 +76,12 @@ class ChordWindow(Window):
 
    def __init__(self, chord):
       config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
-      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=False)
+      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=True)
    
       #the chord model
       self.chord = chord
+      
+      self.messages = ["line 1", "line 2", "line 3"]
 
    def on_resize(self, width, height):
        glViewport(0, 0, width, height)
@@ -61,6 +91,10 @@ class ChordWindow(Window):
        glOrtho(-12*ar, 12*ar, -12, 12, -1, 1)
        glMatrixMode(gl.GL_MODELVIEW)
 
+   def print_line(self, str):
+      self.messages.insert(0,str)
+      while len(self.messages) > 20:
+         self.messages.pop()
 
    def get_node_pos(self, i):
       try:
@@ -85,6 +119,17 @@ class ChordWindow(Window):
    def on_draw(self):
       global chord_messages
       self.clear()
+
+      glPushMatrix()
+      glColor3f(0.4,0.4,0.4)
+      glTranslated(-19,6,0)
+      drawRectangle((0,0), 10,8)
+      glTranslated(0.1,0,0)
+      for m in self.messages:
+         drawLabel(m, (0,0))
+         glTranslated(0,0.4,0)
+      glPopMatrix()
+
 
       #draw connections
       glEnable(GL_BLEND)
@@ -130,6 +175,7 @@ class ChordWindow(Window):
 
             glColor4f(0,0,1,1)
             if m.content == "OK":
+               self.print_line("message arrived at:" + str(m.dest))
                glColor4f(1,1,0,1) #direct communication/response to src
 
             drawCircle(to,.2)                     

@@ -7,7 +7,11 @@ Iteration 2:
 	- Refactor into 3 parts: Chord network, Visualizer and Chord Test-bench 
  	  (a) Chord network - consists of info about current nodes, current messages, define tick() 
  	  (b) Visualizer - only GUI routines, logging functions
+              text box to disply current time, display console with messages, display load/churn (show simple bar graphs:# of fails etc.)
 	  (c) Chord Test-bench - new messages (generator), churn generator, time-stepping, starts/co-ordinates (a) & (b)
+          (d) logger - has functions for registereing metrics
+              log_leave, log_join, log_messgage_reached, log_message_fail, log_message_route
+        
 
 
 Iteration 3:
