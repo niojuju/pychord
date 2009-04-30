@@ -155,33 +155,29 @@ class Node:
 
 
 
-class ChordTest:
-   """ simple test. full network, all 16 nodes are there, all routing tables are set """   
+class Network:
 
-   def __init__(self):
+   def __init__(self, size):
       self.nodes = []
       self.t = 0
+      self.size = size
 
       #init nodes
-      for i in range(SIZE):
+      for i in range(size):
          self.nodes.append(Node(i))
       
       #init routing tables
-      
-      for i in range(SIZE):
+      for i in range(size):
          self.nodes[i].fingers = []
-         #print log(SIZE,2), "links"
-         for j in range(log(SIZE,2)):
-            #print "link to :", (i+(2**j))%SIZE, i, j
-            self.nodes[i].fingers.append(self.nodes[(i+(2**j))%SIZE])
+         for j in range(log(size,2)):
+            self.nodes[i].fingers.append(self.nodes[(i+(2**j))%size])
 
 
+      self.add_messages([Message(10,50,0), Message(20,3,0), Message(32,18,1), Message(61,28,2)])
 
-      #test messages
-      from random import randint 
-      #send_message(self.nodes[1], Message(randint(1,SIZE-1),randint(1,SIZE-1),i)) #random message
-      send_message(self.nodes[1], Message(1,52,1)) #random message
-      send_message(self.nodes[1], Message(55,12,5)) #random message
+   def add_messages(self, list_of_messages):
+      for msg in list_of_messages:
+         send_message(self.t+1, msg)
       
 
    def tick(self):
@@ -190,10 +186,28 @@ class ChordTest:
       for n in self.nodes:
          n.tick(self.t)
 
+   def make_topology(self):
+      print "making topology"
+      
+   def add_joins(self, node_joins):
+      for n_join in node_joins:
+         print "node", n_join[0].id, "joining at contact node:", n_join[0]
+         
+   def add_leave(self, node_leaves):
+      for nl in node_leaves:
+         print "node", nl.id, "leaving"
+         
+   def add_fails(elf, node_fails):
+      for nf in node_fails:
+         print "node", nf.id, "failing"
+      
+      
+   def make_topology(self):
+      print "making topology"
 
 
 if __name__ == "__main__":
-   test = ChordTest()
+   test = Network(SIZE)
    test.tick()
    test.tick()
    test.tick()
