@@ -190,6 +190,6 @@ class ChordWindow(Window):
 
 
 if __name__ == "__main__":
-   test = ChordTest()
+   test = Network(64)
    win = ChordWindow(test)
    pyglet.app.run()
