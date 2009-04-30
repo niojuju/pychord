@@ -28,17 +28,18 @@ Simulation with Churn:
 
 # IMPORTS
 from math import log
+from time import sleep
 import pychord
 import chordViz
 import chordLogger
 
 
 # CONSTANTS
-VISUALIZE = true
-SIZE_OF_NAMESPACE = 2**16
+VISUALIZE = True
+SIZE_OF_NAMESPACE = 2 ** 16
 MAX_NODES = 64      # make 1024 later
 MAX_CHURN_PERCENT = 2 
-MAX_MESSAGES  = (1/100) * MAX_NODES    # (generated in any tick)
+MAX_MESSAGES = (1 / 100) * MAX_NODES    # (generated in any tick)
 CHURN_PDF = ['Uniform', 'Poisson', 'Weibull']
 
 
@@ -46,6 +47,7 @@ class ChordTest:
    """ simple test. full network, all 16 nodes are there, all routing tables are set """   
 
    def __init__(self):
+      """
       self.nodes = []
       self.t = 0
 
@@ -69,23 +71,23 @@ class ChordTest:
       #send_message(self.nodes[1], Message(randint(1,SIZE-1),randint(1,SIZE-1),i)) #random message
       send_message(self.nodes[1], Message(1,52,1)) #random message
       send_message(self.nodes[1], Message(45,12,5)) #random message
-      
+      """      
 
    def tick(self):
       self.t += 1
-     # print "tick", self.t
+      # print "tick", self.t
       for n in self.nodes:
          n.tick(self.t)
 
 
 
 if __name__ == "__main__":
-   test = ChordTest()
-   test.tick()
-   test.tick()
-   test.tick()
-   test.tick()
-   test.tick()
-   test.tick()
-   test.tick()
-
+   tester = ChordTest()
+   visualizer = ChordWindow()
+   logger = chordLogger()
+   
+   for i in range(10):
+       print "Tick", i
+       tester.tick()
+       sleep(1)
+       
