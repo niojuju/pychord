@@ -161,7 +161,7 @@ class Node:
 
 
 
-class ChordTest:
+class chordLogger:
    """ simple test. full network, all 16 nodes are there, all routing tables are set """   
 
    def __init__(self):
