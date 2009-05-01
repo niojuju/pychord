@@ -8,15 +8,9 @@ from pyglet.text import Label
 from pychord import *
 
 
-
-
 EDGE_COLOR = (1,1,1, 0.3)
 NODE_COLOR = (0,1,0, 1)
-
-
 STEP_TIME = 1.0
-
-
 
 def drawLine(p1,p2, width=0.5):
    glLineWidth(width)
@@ -31,7 +25,6 @@ def drawTriangle(pos, w, h, style=GL_TRIANGLES):
     while len(points):
       glVertex2f(points.pop(), points.pop())
     glEnd()
-
 
 def drawRectangle(pos, w, h, style=GL_QUADS):
     points = [pos[0], pos[1], pos[0], pos[1]+h, pos[0]+w, pos[1]+h, pos[0]+w, pos[1]]
@@ -49,8 +42,6 @@ def drawCircle(pos=(0,0), radius=1.0):
    glPopMatrix()
 
 def drawLabel(text, pos=(0,0), **kwargs):
-
-    
     kwargs.setdefault('font_size', 16)
     kwargs.setdefault('center', False)
     if kwargs.get('center'):
@@ -69,18 +60,13 @@ def drawLabel(text, pos=(0,0), **kwargs):
     glPopMatrix()
     return temp_label.content_width
 
-
-
-
 class ChordWindow(Window):
 
    def __init__(self, chord):
       config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
       super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=True)
-   
       #the chord model
       self.chord = chord
-      
       self.messages = ["line 1", "line 2", "line 3"]
 
    def on_resize(self, width, height):
@@ -105,16 +91,12 @@ class ChordWindow(Window):
          n, size = i.id, float(SIZE)
          return cos(radians( n/size*-360+90))*10,sin(radians( n/size*360+90))*10
 
-
    def on_key_press(self, symbol, modifiers):
       if symbol == key.ESCAPE:
          pyglet.app.exit()
       elif symbol == key.SPACE:
          #print "tick", self.chord.t 
          self.chord.tick()
-
-
-
 
    def on_draw(self):
       global chord_messages
@@ -130,7 +112,6 @@ class ChordWindow(Window):
          glTranslated(0,0.4,0)
       glPopMatrix()
 
-
       #draw connections
       glEnable(GL_BLEND)
       glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
@@ -141,14 +122,12 @@ class ChordWindow(Window):
             x2,y2 = self.get_node_pos(dest)
             drawLine((x,y),(x2,y2), 1)
 
-
       #draw nodes
       glColor4f(*NODE_COLOR)
       for node in self.chord.nodes:
          n, size = node.id, float(SIZE)
          x,y = self.get_node_pos(n)
          drawCircle((x,y),.05)
-
 
       #draw current messages
       glDisable(GL_DEPTH_TEST)
@@ -182,10 +161,7 @@ class ChordWindow(Window):
             #drawTriangle(fro, .2,.2)
             drawLine(fro,to,3)
             
-            
-
       #self.flip()
-
 
 
 
