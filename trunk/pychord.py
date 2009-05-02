@@ -65,11 +65,14 @@ def send_message(node, msg):
 #A node in the Chord network
 class Node:
 
-   def __init__(self, id, network=None):
+   def __init__(self, id, network=None, TTL=-1):
       self.id = id
       self.fingers = []
       self.predecessor = None
       self.time = 0
+      self.TTL = TTL
+      
+      self.network = network
 
       #the pending list will hold info so that we can remember what requests we are still waiting for
       #when we initialize a search or join well add a reminder here until we receive an answer
@@ -83,6 +86,10 @@ class Node:
    #all taht are enqueud at timesteop but not what other dop during this timestep?
    #possibly approximate network delay by setting dt of new events to next round + delay
    def tick(self, dt):
+      self.TTL == self.TTL - 1
+      if self.TTL == 0:
+         pass
+         #kill self
       global chord_messages
       self.time = dt
       if not self.id in chord_messages:
@@ -108,24 +115,68 @@ class Node:
       for m in consumed:
          messages.remove(m)
 
+
+   def join_answer(self, successor):
+      pass
+      self.fingers[0] = successor.id
+      successor.notify(self)
+      #sets own successor to node that answers
+      
+   def finger_answer(self, finger_index, finger_node):
+      self.fingers[finger_index] = finger_node
+      
+   def notify(self, predecessor):
+      self.predecessor  = predecessor
+      
+      #notify: set successors predessor to self
+
+   def stabilize(self):
+      pass
+      if self.fingers[0].predecessor.id > self.id:
+         self.fingers[0].predecessor.notify(self)
+      #check whether successors predesessor is self
+      #if successors predessesor is new/smaller the succesor bigger than self set new successor
+      #notify successor that self is its predessesor
+      
+   def fix_fingers(self):
+      pass
+      #called periodically to fix teh finger table
+      #finger[i] = find successor of (finger[i] optimal)
+      for j in range(log(self.network.size,2)):
+         finger_msg = Message(self.id, (self.id+(2**j))%self.network.size, content="FINGER:"+str(j))
+         send_message(finger_msg.src, finger_msg)
+      #send join message
+      #   self.nodes[i].fingers.append(self.nodes[(i+(2**j))%size])
+
+   def join(self, intro_node):
+      #find successor of self
+      join_msg = Message(intro_node, self.id, content="JOIN")
+      send_message(join_msg.src, join_msg)
+      #send join message
+
    
-   #tries to route the message / find teh successor of msg.dest            
+   #tries to route the message / find the successor of msg.dest            
    def find_successor(self, msg):
    
       if between(msg.dest, self.id, self.fingers[0].id) and msg.dest < self.fingers[0].id:
          #respond
+         if msg.content == "JOIN":
+            self.chord.nodes[mosg.src].join_answer(self.id)
+         if msg.content.startswith("FINGER"):
+            f_index = int(msg.content.split(":")[1])
+            self.network.nodes[msg.src].finger_answer(f_index,self)
          msg.content = "OK"
          send_message(msg.src, msg)
          msg.last_location = msg.current_location
          msg.current_location = msg.src         
          return self.fingers[0].id
       
-      from pprint import pprint
+      #from pprint import pprint
       #route to next closest
       node = self.closest_preceding_node(msg)
-      print self, "to", msg.dest,  "closest predesessor (routed to):", node
-      for f in self.fingers:
-         print f
+      #print self, "to", msg.dest,  "closest predesessor (routed to):", node
+      #for f in self.fingers:
+      #   print f
 
       msg.t = self.time 
       #print "routing to ", node     
@@ -165,15 +216,20 @@ class Network:
 
       #init nodes
       for i in range(size):
-         self.nodes.append(Node(i))
+         self.nodes.append(Node(i, self))
       
       #init routing tables
       for i in range(size):
+         #self.nodes[i].fix_fingers()
          self.nodes[i].fingers = []
          for j in range(log(size,2)):
+            print i, "node, finger ", j, ":", (i+(2**j))%size
             self.nodes[i].fingers.append(self.nodes[(i+(2**j))%size])
 
-
+      for i in range(size):
+         self.nodes[i].fix_fingers()
+         
+         
       self.add_messages([Message(28,11)])
 
    def add_messages(self, list_of_messages):
