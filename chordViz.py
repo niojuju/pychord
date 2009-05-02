@@ -66,8 +66,8 @@ def drawLabel(text, pos=(0,0), **kwargs):
 class ChordWindow(Window):
 
    def __init__(self, chord):
-      config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
-      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=False)
+      #config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
+      super(ChordWindow, self).__init__(caption="Chord visualization", fullscreen=False)
       #the chord model
       self.chord = chord
       self.messages = ["line 1", "line 2", "line 3"]
