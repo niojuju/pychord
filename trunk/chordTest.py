@@ -64,16 +64,6 @@ class ChordTest:
       self.nodes = []
       self.t = 0
       
-      
-
-
-   def add_new_messages(nw):
-        #test messages
-        #send_message(self.nodes[1], Message(randint(1,SIZE-1),randint(1,SIZE-1),i)) #random message
-        send_message(self.nodes[1], Message(1,52,1)) #random message
-        send_message(self.nodes[1], Message(45,12,5)) #random message
-        return
-
 if __name__ == "__main__":
    """ Make class instances """ 
    tester = ChordTest()
@@ -100,8 +90,7 @@ if __name__ == "__main__":
    """ Normal Simulation (No churn), only messages """
    print "Normal Simulation (No churn), only messages"
    print "-------------------------------------------"
-    
-   
+      
    for i in range(LENGTH_OF_SIMULATION):
        # add new messages
        # tick network
@@ -119,6 +108,8 @@ if __name__ == "__main__":
   # add new messages
   # add churn (joins, leaves) upto MAX_RND_CHURN nodes
   # tick network
+   print "Simulation with churn & messages"
+   print "--------------------------------"
 
    for i in range(LENGTH_OF_SIMULATION):
        # add new messages
@@ -133,14 +124,15 @@ if __name__ == "__main__":
        joins = []
        for j in range( randint(0, MAX_CHURN_PERCENT * MAX_NODES) ):
            node = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           joins.append(node)           
+           joins.append(node)
+           tester.nodes.append(node)
        nw.add_joins(joins)              
        
        leaves = []
        for j in range( randint(0, MAX_CHURN_PERCENT * MAX_NODES) ):
-           node = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           tester
-           joins.append(node)           
+           node_index = randint(0, len(tester.nodes)-1)
+           node = tester.nodes.pop( node_index )
+           leaves.append(node) 
        nw.add_leaves(leaves)              
         
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
@@ -155,4 +147,13 @@ if __name__ == "__main__":
        # remove conseq. MAX_ADV_CHURN nodes to simulate adversary
    
    """ Un-bootstrap network (just for fun) """
-       # remove a random node from the list
+   print "Shutting down network"
+   print "---------------------"
+
+   # remove a random node from the list
+   while len(self.nodes) > 5:
+       node_index = randint(0, len(tester.nodes)-1)
+       node = tester.nodes.pop( node_index )
+       nw.add_leaves([node])
+       for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
+            nw.tick()
