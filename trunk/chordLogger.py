@@ -32,21 +32,21 @@ class chordLogger:
            """ Open file and stuff """
            
         # Initialize metrics collection variables
+        # Nodes
         self.total_joins = 0
         self.total_leaves = 0
         self.total_fails = 0
+        #Messages
+        self.total_msgs_sent = 0       
         self.total_msgs_reached = 0
         self.total_hops_taken_for_reach = 0
-        self.total_hops_taken_before_failure = 0
         self.total_msgs_failed = 0
-        
+        self.total_hops_taken_before_failure = 0        
+        # Averages
         self.current_nodes_in_network = 0
         self.avg_hops_to_reach = 0
         self.avg_hops_before_failure = 0
         
-        self.hot_sources = []
-        self.hot_destinations = []
-
     def log(self, logString):
        # to console
        print logString 
@@ -69,8 +69,10 @@ class chordLogger:
     def print_state(self):
         print "current_nodes_in_network ", self.current_nodes_in_network
         print "avg_hops_to_reach ", self.avg_hops_to_reach
+        print "total_msgs_sent ", self.total_msgs_sent        
         print "total_msgs_reached ", self.total_msgs_reached
-        print "total_fails ", self.total_fails
+        print "total_node_failures ", self.total_fails
+        print "failure rate: " (self.total_fails+1)/(self.total_msgs_sent+1)
         
         
  
@@ -84,10 +86,11 @@ class chordLogger:
       
     """
     Network Log Methods:
-    - log_join(ID)
-    - log_leave(ID)
-    - log_msg_reached(src, dest, hops)
-    - log_msg_failed(src, dest, hops, failed_at, trying_to_reach)
+    - log_join(nodeID)
+    - log_leave(nodeID)
+    - log_msg_sent(self, srcID, destID)
+    - log_msg_reached(srcID, destID, hops)
+    - log_msg_failed(srcID, destID, hops, failed_at, trying_to_reach)
     - log_message_route -- not sure
     """
    
@@ -103,15 +106,19 @@ class chordLogger:
        self.total_fails += 1
        self.log(("Node Fail: ", nodeID))
        
-    def log_msg_reached(self, src, dest, hops):
+    def log_msg_sent(self, srcID, destID):
+       self.total_msgs_sent += 1
+       self.log(("Message sent from ", srcID, " to ", destID))
+
+    def log_msg_reached(self, srcID, destID, hops):
        self.total_msgs_reached += 1
        self.total_hops_taken_for_reach += hops
-       self.log(("Message from ", src, " to ", dest, " reached in ", hops, " hops"))
+       self.log(("Message from ", srcID, " to ", destID, " reached in ", hops, " hops"))
 
-    def log_msg_failed(self, src, dest, hops, failed_at, trying_to_reach):
+    def log_msg_failed(self, srcID, destID, hops, failed_at, trying_to_reach):
        self.total_msgs_failed += 1
        self.total_hops_taken_before_failure += hops
-       self.log(("Message from ", src, " to ", dest, " failed at node ", failed_at, " trying to reach", trying_to_reach))
+       self.log(("Message from ", srcID, " to ", destID, " failed at node ", failed_at, " trying to reach", trying_to_reach))
        
    
 if __name__ == "__main__":

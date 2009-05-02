@@ -3,7 +3,6 @@ ChordTest :
 - Bootstrap Network
 - Regular Simulation
 - Simulation with Churn
-- Simulation with Adversarial Churn
 - Un-Bootstrap Network
 """
 
