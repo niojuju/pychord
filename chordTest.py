@@ -1,30 +1,9 @@
 """
-Constants:
-- SIZE_OF_NAMESPACE = 2^16 ??
-- MAX_NODES = 2^10 = 1024 currently
-- MAX_CHURN_PERCENT = 2 
-- VISUALIZE
-- LOG_TO_FILE
-- MAX_MESSAGES (generated in any tick) = 1% x MAX_NODES
-- CHURN_PDF = {Uniform, Poisson, Weibull}
-
-Methods: 
-- None, only __main__
-
-Bootstrap Network:
-- Init
-- generate joins [with random id] (1 per tick?)
-- call tick on n/w & ( viz OR Logger ?)
-
-Regular Simulation:
-- generate [a random no. of] messages per tick from a [random] node to a [random] node
-- call tick on n/w & ( viz OR Logger ?)
-
-Simulation with Churn:
-- generate [a random no. of] messages per tick from a [random] node to a [random] node
-- generate [a random no. of] churn per tick
-- call tick on n/w & ( viz OR Logger ?)
-
+ChordTest :
+- Bootstrap Network
+- Regular Simulation
+- Simulation with Churn
+- Un-Bootstrap Network
 """
 
 # IMPORTS
@@ -47,14 +26,14 @@ MAX_MESSAGES = MAX_NODES/10   # (generated in any tick)
 
 JOIN_LATENCY = 5 # takes JOIN_LATENCY ticks for a node to completely finish the join process
 
-
 # Logging  CONSTANTS
 VISUALIZE = True
 LOG_TO_FILE = True
 
 # Churn CONSTANTS
 MAX_CHURN_PERCENT = 2 
-CHURN_PDF = ['Uniform', 'Poisson', 'Weibull']
+MAX_RND_CHURN = MAX_CHURN_PERCENT * MAX_NODES
+CHURN_PDF = ['Uniform', 'Poisson']
 
 
 class ChordTest:
@@ -67,7 +46,7 @@ class ChordTest:
 if __name__ == "__main__":
    """ Make class instances """ 
    tester = ChordTest()
-   # logger = chordLogger()
+   logger = chordLogger()
    nw = pychord.Network(SIZE_OF_NAMESPACE) # should be SIZE_OF_NAMESPACE
 
    """ Bootstrap/Initialize network """ 
@@ -80,13 +59,17 @@ if __name__ == "__main__":
    print "---------------------"
    
    for i in range(MAX_NODES*0.9):
-        newnode = randint(1,SIZE_OF_NAMESPACE-1)
-        tester.nodes.append(newnode)
-        nw.add_joins([newnode]) # add new nodes for the next tick cycle
-        # TODO: Ask Tom to change interface for add_joins to accept only IDs (not node objects)
+        newNodeID = randint(1,SIZE_OF_NAMESPACE-1)
+        tester.nodes.append(newNodeID)
+        nw.add_joins([newNodeID]) # add new nodes for the next tick cycle
         for j in range(JOIN_LATENCY):
             nw.tick()                    
-   
+
+   # Pause         
+   raw_input("Press ENTER to continue... ")
+                
+                
+                
    """ Normal Simulation (No churn), only messages """
    print "Normal Simulation (No churn), only messages"
    print "-------------------------------------------"
@@ -95,20 +78,27 @@ if __name__ == "__main__":
        # add new messages
        # tick network
        messages = []
-       for j in range( randint(0, MAX_MESSAGES) ):
-           src = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           dest = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           messages.append(Message(src, dest))
+       for j in range( randint(0, MAX_MESSAGES) ): # random no. of messages per tick, but up to MAX_MESSAGES
+           srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           destID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           messages.append(Message(srcID, destID))
        nw.add_messages(messages)               
        nw.tick()
        sleep(0.1)
        #print "Tick", i
              
+   # Pause         
+   raw_input("Press ENTER to continue... ")
+      
+ 
+       
+       
+       
    """ Simulation with random churn """
-  # add new messages
-  # add churn (joins, leaves) upto MAX_RND_CHURN nodes
-  # tick network
-   print "Simulation with churn & messages"
+   # add new messages
+   # add churn (joins, leaves) upto MAX_RND_CHURN nodes
+   # tick network
+   print "Simulation with RANDOM churn & messages"
    print "--------------------------------"
 
    for i in range(LENGTH_OF_SIMULATION):
@@ -116,35 +106,79 @@ if __name__ == "__main__":
        # tick network
        messages = []
        for j in range( randint(0, MAX_MESSAGES) ):
-           src = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           dest = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           messages.append(Message(src, dest))           
+           srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           destID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           messages.append(Message(srcID, destID))           
        nw.add_messages(messages)              
        
        joins = []
-       for j in range( randint(0, MAX_CHURN_PERCENT * MAX_NODES) ):
-           node = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           joins.append(node)
-           tester.nodes.append(node)
+       for j in range( randint(0, MAX_RND_CHURN) ):
+           nodeID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           joins.append(nodeID)
        nw.add_joins(joins)              
        
        leaves = []
-       for j in range( randint(0, MAX_CHURN_PERCENT * MAX_NODES) ):
+       for j in range( randint(0, MAX_RND_CHURN) ):
            node_index = randint(0, len(tester.nodes)-1)
-           node = tester.nodes.pop( node_index )
-           leaves.append(node) 
+           nodeID = tester.nodes.pop( node_index )
+           leaves.append(nodeID) 
        nw.add_leaves(leaves)              
-        
+
+       tester.nodes.append(nodeID) # add nodes in joins[] after getting leaves[]
+       
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
             
        sleep(0.1)
        
-       
+   # Pause         
+   raw_input("Press ENTER to continue... ")
    
+       
+       
+       
    """ Simulation with adversarial churn """
-       # sort list of nodes present
-       # remove conseq. MAX_ADV_CHURN nodes to simulate adversary
+   # sort list of nodes present
+   # remove conseq. MAX_ADV_CHURN nodes to simulate adversary
+   # TODO: add joins too ?     
+   # tick network
+   print "Simulation with ADVERSARIAL churn & messages"
+   print "--------------------------------------------"
+
+   for i in range(LENGTH_OF_SIMULATION):
+       # add new messages
+       # tick network
+       messages = []
+       for j in range( randint(0, MAX_MESSAGES) ):
+           srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           destID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           messages.append(Message(srcID, destID))           
+       nw.add_messages(messages)              
+       
+       joins = []
+       for j in range( randint(0, MAX_RND_CHURN) ):
+           nodeID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           joins.append(nodeID)
+       nw.add_joins(joins)              
+       
+       leaves = []
+       for j in range( randint(0, MAX_RND_CHURN) ):
+           node_index = randint(0, len(tester.nodes)-1)
+           nodeID = tester.nodes.pop( node_index )
+           leaves.append(nodeID) 
+       nw.add_leaves(leaves)              
+
+       tester.nodes.append(nodeID) # add nodes in joins[] after getting leaves[]
+       
+       for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
+            nw.tick()
+            
+       sleep(0.1)
+   
+   # Pause         
+   raw_input("Press ENTER to continue... ")
+   
+   
    
    """ Un-bootstrap network (just for fun) """
    print "Shutting down network"
@@ -157,3 +191,4 @@ if __name__ == "__main__":
        nw.add_leaves([node])
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
+    sleep(0.1)
