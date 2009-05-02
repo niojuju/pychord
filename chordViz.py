@@ -60,11 +60,14 @@ def drawLabel(text, pos=(0,0), **kwargs):
     glPopMatrix()
     return temp_label.content_width
 
+
+
+
 class ChordWindow(Window):
 
    def __init__(self, chord):
       config = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True,)
-      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=True)
+      super(ChordWindow, self).__init__(caption="Chord visualization", config=config, fullscreen=False)
       #the chord model
       self.chord = chord
       self.messages = ["line 1", "line 2", "line 3"]
@@ -83,12 +86,13 @@ class ChordWindow(Window):
          self.messages.pop()
 
    def get_node_pos(self, i):
+      print i
       try:
          #print "i as int", self.chord.nodes[i]
-         n, size = self.chord.nodes[i].id, float(SIZE)
+         n, size = self.chord.nodes[i].id, float(self.chord.size)
          return cos(radians( n/size*-360+90))*10,sin(radians( n/size*360+90))*10
       except:
-         n, size = i.id, float(SIZE)
+         n, size = i.id, float(self.chord.size)
          return cos(radians( n/size*-360+90))*10,sin(radians( n/size*360+90))*10
 
    def on_key_press(self, symbol, modifiers):
@@ -125,7 +129,7 @@ class ChordWindow(Window):
       #draw nodes
       glColor4f(*NODE_COLOR)
       for node in self.chord.nodes:
-         n, size = node.id, float(SIZE)
+         n, size = node.id, float(self.chord.size)
          x,y = self.get_node_pos(n)
          drawCircle((x,y),.05)
 
@@ -140,7 +144,7 @@ class ChordWindow(Window):
                continue #dont handle messages that are still waiing to start
 
             
-            #print self.chord.t, m.last_location, m.current_location
+            print self.chord.t, m.last_location, m.current_location
             src = self.get_node_pos(m.src)
             dst = self.get_node_pos(m.dest)
             fro = self.get_node_pos(m.last_location)
@@ -166,6 +170,6 @@ class ChordWindow(Window):
 
 
 if __name__ == "__main__":
-   test = Network(64)
+   test = Network(32)
    win = ChordWindow(test)
    pyglet.app.run()

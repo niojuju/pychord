@@ -27,7 +27,7 @@ def between(x, i, j):
 #A simple class to hold some data representing a message on teh network
 class Message:
 
-   def __init__(self, src, dest, time_stamp, transfer_time=3, content=""):
+   def __init__(self, src, dest, time_stamp=None, transfer_time=3, content=""):
       self.dest = dest              
       self.src = src                
       self.init_time =time_stamp            # Start-time 
@@ -65,7 +65,7 @@ def send_message(node, msg):
 #A node in the Chord network
 class Node:
 
-   def __init__(self, id):
+   def __init__(self, id, network=None):
       self.id = id
       self.fingers = []
       self.predecessor = None
@@ -75,7 +75,7 @@ class Node:
       #when we initialize a search or join well add a reminder here until we receive an answer
       #we will always put a time-stamp with each request when we put it in here so that we can know 
       #when to stop waiting/label the request failed by exceeded TTL
-      self.pending = [] 
+      self.pending = []
 
    #is called at each time step during teh simulation, teh node is allowed to handle its incoming messages
    #dt = current time step
@@ -123,9 +123,10 @@ class Node:
       from pprint import pprint
       #route to next closest
       node = self.closest_preceding_node(msg)
-      print "predesessor:"
-      pprint (self.fingers)
-      print self.id,  "closest pre:", node.id
+      print self, "to", msg.dest,  "closest predesessor (routed to):", node
+      for f in self.fingers:
+         print f
+
       msg.t = self.time 
       #print "routing to ", node     
       send_message(node, msg)
@@ -146,7 +147,7 @@ class Node:
 
 
    def __str__(self):
-      return "Node %d (%d,%d,%d,%d)" % (self.id, self.fingers[0].id, self.fingers[1].id, self.fingers[2].id, self.fingers[3].id)
+      return "Node %d " % (self.id)
 
    def __rerp__(self):
       return self.__str__()
@@ -173,11 +174,12 @@ class Network:
             self.nodes[i].fingers.append(self.nodes[(i+(2**j))%size])
 
 
-      self.add_messages([Message(10,50,0), Message(20,3,0), Message(32,18,1), Message(61,28,2)])
+      self.add_messages([Message(28,11)])
 
    def add_messages(self, list_of_messages):
       for msg in list_of_messages:
-         send_message(self.t+1, msg)
+         msg.t = self.t+1
+         send_message(msg.src, msg)
       
 
    def tick(self):
@@ -207,7 +209,7 @@ class Network:
 
 
 if __name__ == "__main__":
-   test = Network(SIZE)
+   test = Network(32)
    test.tick()
    test.tick()
    test.tick()
