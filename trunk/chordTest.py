@@ -12,9 +12,11 @@ from math import log
 from time import sleep
 from random import randint 
 
+import sys
 import pychord
+import chord
 import chordViz
-import chordLogger
+from chordLogger import *
 
 # CONSTANTS
 # Simulation CONSTANTS
@@ -42,11 +44,14 @@ class ChordTest:
       self.t = 0
       
 if __name__ == "__main__":
+   print "## CHORD TESTER ##"
    """ Make class instances """ 
    tester = ChordTest()
    logger = chordLogger()
-   nw = pychord.Network(SIZE_OF_NAMESPACE) # should be SIZE_OF_NAMESPACE
+   #nw = pychord.Network(SIZE_OF_NAMESPACE) # should be SIZE_OF_NAMESPACE
 
+   nw = chord.Network()
+   
    """ Bootstrap/Initialize network """ 
    # add a fixed number (currently 1) of nodes per tick
    # keep track of nodes that have been added
@@ -57,14 +62,17 @@ if __name__ == "__main__":
    print "---------------------"
    raw_input("Press ENTER to continue... ") # Pause
    
-   for i in range(MAX_NODES*0.9):
-        newNodeID = randint(1, SIZE_OF_NAMESPACE-1) # Uniformly at Random
-        tester.nodes.append(newNodeID)
-        nw.add_joins([newNodeID]) # add new nodes for the next tick cycle
-        for j in range(JOIN_LATENCY):
-            nw.tick()                    
+   #for i in range(MAX_NODES*0.9):
+   #     newNodeID = randint(1, SIZE_OF_NAMESPACE-1) # Uniformly at Random
+   #     tester.nodes.append(newNodeID)
+   #     nw.add_joins([newNodeID]) # add new nodes for the next tick cycle
+   #     for j in range(JOIN_LATENCY):
+   #         nw.tick()      
+
+   nw.bootstrap(3)
+   nw.grow(MAX_NODES*0.9)              
                 
-                
+   
                 
    """ Normal Simulation (No churn), only messages """
    print "\nNormal Simulation (No churn), only messages"
@@ -76,15 +84,18 @@ if __name__ == "__main__":
        # tick network
        messages = []
        for j in range( randint(0, MAX_MESSAGES) ): # random no. of messages per tick, but up to MAX_MESSAGES
-           srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           destID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           messages.append(Message(srcID, destID))
+           srcID =  nw.random_node().id          #tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           destID = randint(0, nw.name_space_size-1)  #tester.nodes[ randint(0, len(tester.nodes)-1) ]
+           messages.append(chord.Message(srcID, destID))
        nw.add_messages(messages)               
        nw.tick()
        sleep(0.1)
        #print "Tick", i
                    
- 
+
+
+   sys.exit(0)
+######################################################################
        
        
        
@@ -182,3 +193,6 @@ if __name__ == "__main__":
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
        sleep(0.1)
+
+
+
