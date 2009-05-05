@@ -192,6 +192,8 @@ class Network:
 
         self.max_size = 500
         self.growing = False 
+
+        self.new_messages = []
         
         #parameters for randomization/eventdistribution
         
@@ -267,6 +269,11 @@ class Network:
         node = self.random_node()
         self.remove_node(node.id)
         
+
+    def add_messages(self, messages):
+       self.new_messages = messages
+
+
     def tick(self):
         global chord_messages
         for n in self.nodes.values():
@@ -274,7 +281,7 @@ class Network:
 
         #add joins based on join rate
         if len(self.nodes)<self.max_size and random() < self.churn_rate:
-            for i in range(paretovariate(self.concurent_join_alpha)):
+            for i in range(paretovariate(int(self.concurent_join_alpha))):
                n = Node(self.get_unique_id())
                hook = self.add_node(n) #also returns a hook for the node to join at
                n.join(hook)
@@ -291,14 +298,13 @@ class Network:
         print len(chord_messages)
          
 
-        #messages
-        #for i in range(len(self.node)*self.message_rate)
 
-
+      
         #run the stabilization and fix_finger protocol on soem of teh nodes in teh network
         num_fixes      = len(self.nodes)* self.fix_rate
         num_stabilizes = len(self.nodes)* self.stabilize_rate
-        num_messages   = len(self.nodes)* self.message_rate
+        #num_messages   = len(self.nodes)* self.message_rate auto generate messages
+        num_messages = len(self.new_messages)
         if self.growing: 
             num_messages = 0
 
@@ -312,9 +318,9 @@ class Network:
                 self.random_node().stabilize()
                 num_stabilizes = num_stabilizes -1        
             if num_messages > 0 :
-                src, dest = self.random_node(), int( random()*self.name_space_size -1)
-                m = Message(src.id, dest , 'lookup')
-                src.find_successor(m)
+            #   src, dest = self.random_node(), int( random()*self.name_space_size -1)
+                m = self.new_messages.pop()
+                self.nodes[m.src].find_successor(m)
                 num_messages = num_messages -1 
         
         
