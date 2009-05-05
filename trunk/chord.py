@@ -33,11 +33,12 @@ class Message:
 
 class Node:
     
-    def __init__(self, id):
+    def __init__(self, id, ttl=-1):
         self.id = id
         self.predec = None
         self.fingers = [None for i in range(NUM_BITS)]
         self.down = False
+        self.ttl = ttl
         
         
     def find_successor(self, msg):
@@ -222,7 +223,6 @@ class Network:
             self.nodes[i].predec = last_node #set predecessor
             if last_node: #set finger table of predecessor to current node
                 last_node.fingers = [self.nodes[i] for x in range(NUM_BITS)]
- 
             last_node = self.nodes[i]
  
         self.nodes[self.ids[0]].predec = last_node #predecessor of first node is teh last one
@@ -233,7 +233,20 @@ class Network:
         hook = self.random_node()
         self.nodes[node.id] = node
         self.ids.append(node.id)
+        if self.logger:
+           self.logger.log_join(node.id) 
         return hook
+      
+      
+    def add_joins(self, node_joins):
+       for join in node_join:
+            id, ttl = join
+            node = Node(id, ttl)
+            self.add_node(node)
+      
+    def add_leaves(self, leaves):
+       for leave_id in node_join:
+            self.remove_node(leave)
       
       
     def random_node(self):
@@ -257,17 +270,19 @@ class Network:
                 n = Node(self.get_unique_id())
                 hook = self.add_node(n) #also returns a hook for the node to join at
                 n.join(hook)
-                if self.logger:
-                   self.logger.log_join(n.id)   
-            
-                
+  
+         
             self.tick()
         self.growing = False
+
+
 
     def remove_node(self, id):
        self.ids.remove(id)
        self.nodes[id].shutdown()
        del self.nodes[id]
+       if self.logger:
+           self.logger.log_leave(n.id) 
 
 
     def remove_random(self):
@@ -304,7 +319,6 @@ class Network:
         for m in consumed:
             chord_messages.remove(m)
 
-        print len(chord_messages)
          
 
 
