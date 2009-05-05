@@ -61,18 +61,19 @@ class chordLogger:
         """ Updates internal state variables a.k.a. Metrics collected """
         self.current_nodes_in_network = self.total_joins - self.total_leaves - self.total_fails
         if self.total_msgs_reached != 0:
-            self.avg_hops_to_reach = self.total_hops_taken_for_reach / self.total_msgs_reached
+            self.avg_hops_to_reach = float(self.total_hops_taken_for_reach) / float(self.total_msgs_reached)
         if self.total_msgs_failed != 0:
             self.avg_hops_before_failure = self.total_hops_taken_before_failure / self.total_msgs_failed        
         print "[chordLogger] Updating internal state variables " 
  
     def print_state(self):
+	self.update_state()
         print "current_nodes_in_network ", self.current_nodes_in_network
         print "avg_hops_to_reach ", self.avg_hops_to_reach
         print "total_msgs_sent ", self.total_msgs_sent        
         print "total_msgs_reached ", self.total_msgs_reached
         print "total_node_failures ", self.total_fails
-        print "failure rate: " (self.total_fails+1)/(self.total_msgs_sent+1)
+        print "failure rate: ", float(self.total_fails+1)/float(self.total_msgs_sent+1)
         
         
  

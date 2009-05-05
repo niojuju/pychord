@@ -257,6 +257,9 @@ class Network:
                 n = Node(self.get_unique_id())
                 hook = self.add_node(n) #also returns a hook for the node to join at
                 n.join(hook)
+                if self.logger:
+                   self.logger.log_join(n.id)   
+            
                 
             self.tick()
         self.growing = False
@@ -278,17 +281,19 @@ class Network:
 
     def tick(self):
         global chord_messages
+        
+        
         for n in self.nodes.values():
            n.check_dead_links()
 
         #add joins based on join rate
-        if len(self.nodes)<self.max_size and random() < self.churn_rate:
-            for i in range(paretovariate(int(self.concurent_join_alpha))):
-               n = Node(self.get_unique_id())
-               hook = self.add_node(n) #also returns a hook for the node to join at
-               n.join(hook)
-               if self.logger:
-                   self.logger.log_join(n.id)
+        #if len(self.nodes)<self.max_size and random() < self.churn_rate:
+        #    for i in range(paretovariate(int(self.concurent_join_alpha))):
+        #       n = Node(self.get_unique_id())
+        #       hook = self.add_node(n) #also returns a hook for the node to join at
+        #       n.join(hook)
+        #       if self.logger:
+        #           self.logger.log_join(n.id)
         
         consumed = []
         for m in chord_messages:
@@ -327,10 +332,17 @@ class Network:
                 if self.logger:
                    self.logger.log_msg_sent(m.src, m.dest)
                 self.nodes[m.src].find_successor(m)
+                
+                if m.status == 'done':
+                  self.logger.log_msg_reached(m.src, m.dest, len(m.route))
+                elif m.status == 'fail':
+                  self.logger.log_msg_failed(m.src, m.dest, len(m.route))
+                else:
+                  "Message that isnt doing anything??"
+                
                 num_messages = num_messages -1 
 
-         if self.logger:
-            for i in range(chord_messages:
+
             
         
         
