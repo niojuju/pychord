@@ -97,31 +97,31 @@ class chordLogger:
    
     def log_join(self, nodeID):
        self.total_joins += 1
-       self.log(("Node Join: ", nodeID))
+       self.log("Node Join: " + str(nodeID))
        
     def log_leave(self, nodeID):
        self.total_leaves += 1
-       self.log(("Node Leave: ", nodeID))
+       self.log("Node Leave: " + str(nodeID))
 
     def log_fail(self, nodeID):
        self.total_fails += 1
-       self.log(("Node Fail: ", nodeID))
+       self.log("Node Fail: " + str(nodeID))
        
     def log_msg_sent(self, srcID, destID):
        self.total_msgs_sent += 1
-       self.log(("Message sent from ", srcID, " to ", destID))
+       self.log("Message sent from " + str(srcID) + " to " + str(destID))
 
     def log_msg_reached(self, srcID, destID, hops):
        self.total_msgs_reached += 1
        self.total_hops_taken_for_reach += hops
-       self.log(("Message from ", srcID, " to ", destID, " reached in ", hops, " hops"))
+       self.log("Message from " + str(srcID) + " to " + str(destID) + " reached in " + str(hops) + " hops")
 
     def log_msg_failed(self, srcID, destID, hops, failed_at, trying_to_reach):
        self.total_msgs_failed += 1
        self.total_hops_taken_before_failure += hops
-       self.log(("Message from ", srcID, " to ", destID, " failed at node ", failed_at, " trying to reach", trying_to_reach))
+       self.log("Message from " + str(srcID) + " to " + str(destID) + " failed at node " + str(failed_at) + " trying to reach " + str(trying_to_reach))
        
-   
+""" Self-test: ignore for the purposes of the actual program ... """   
 if __name__ == "__main__":
     log = chordLogger()
     print "[chordLogger] instance made"

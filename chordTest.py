@@ -21,24 +21,46 @@ from chordLogger import *
 # CONSTANTS
 # Simulation CONSTANTS
 LENGTH_OF_SIMULATION = 10**2
+TICK_DELAY = 0.1 # in seconds
 # Chord/Network  CONSTANTS
-SIZE_OF_NAMESPACE = 2**16
+SIZE_OF_NAMESPACE = 2**16 # --> passed into Chord-Network
 MAX_NODES = 64      # make 1024 later
 MAX_MESSAGES = MAX_NODES/10   # (generated in any tick)
 JOIN_LATENCY = 5 # (approximation) how many ticks it takes for a node to completely finish the join process
 # Logging  CONSTANTS
-VISUALIZE = True
-LOG_TO_FILE = True
+VISUALIZE = False # --> passed into Logger
+LOG = True
+LOG_TO_FILE = False # --> passed into Logger
 # Churn CONSTANTS
 MAX_CHURN_PERCENT = 2 
 MAX_RND_CHURN = MAX_CHURN_PERCENT * MAX_NODES
 MAX_ADV_CHURN = log(MAX_NODES, 2) 
-CHURN_PDF = 'Uniform' # 'Uniform' or 'Poisson'
+CHURN_PDF = 'Uniform' # 'Uniform' or 'PowerLaw'
 ADVERSARY = 'Consecutive' # 'Random' or 'Consecutive'
+CHURN_PROTECT = 'None' # 'None' or 'Replication' or 'Randomization' -- passed into Chord-Network
 
+def Churn_PRNG(simulation_length):
+    if CHURN_PDF is 'Uniform':
+        return randint(1, simulation_length)
+    if CHURN_PDF is 'PowerLaw':
+        CHURN_ALPHA = 2
+        return int ( simulation_length * paretovariate(CHURN_ALPHA) )
+    
+def Tick_All(self):
+    tester.tick()
+    nw.tick()
+    if LOG is True:
+        logger.tick()
+    if VISUALIZE is True:
+        viz.tick()
+    
 class ChordTest:
    """ simple test. full network, all 16 nodes are there, all routing tables are set """   
 
+   def tick(self):
+      # TODO: check if any node's TTL has run out, if has, remove from list
+      # assumes that the network will also retire all nodes whose TTL has run out...
+   
    def __init__(self):
       self.nodes = []
       self.t = 0
@@ -48,7 +70,7 @@ if __name__ == "__main__":
    """ Make class instances """ 
    tester = ChordTest()
    logger = chordLogger()
-   #nw = pychord.Network(SIZE_OF_NAMESPACE) # should be SIZE_OF_NAMESPACE
+   #viz = ChordWindow()
 
    nw = chord.Network(logger)
    
@@ -61,19 +83,23 @@ if __name__ == "__main__":
    print "\nBootstrapping Network"
    print "---------------------"
    raw_input("Press ENTER to continue... ") # Pause
-   
-   #for i in range(MAX_NODES*0.9):
-   #     newNodeID = randint(1, SIZE_OF_NAMESPACE-1) # Uniformly at Random
-   #     tester.nodes.append(newNodeID)
-   #     nw.add_joins([newNodeID]) # add new nodes for the next tick cycle
-   #     for j in range(JOIN_LATENCY):
-   #         nw.tick()      
 
    nw.bootstrap(3)
-   nw.grow(MAX_NODES*0.9)              
-                
    
+   # TIME_TO_GROW = JOIN_LATENCY*MAX_NODES
+   # for i in range(MAX_NODES):
+        # newNodeID = randint(1, SIZE_OF_NAMESPACE-1) # Uniformly at Random
+        # # ewNodeTTL = TIME_TO_GROW + Churn_PRNG(LENGTH_OF_SIMULATION)
+        # # IME_TO_GROW -= JOIN_LATENCY # all nodes must start TTL countdown at same time
+        # newNodeTTL = -1
+        # tester.nodes.append((newNodeID, newNodeTTL))
+        # nw.add_joins([newNodeID, newNodeTTL]) # add new nodes for the next tick cycle
+        # for j in range(JOIN_LATENCY):
+            # Tick_All()      
+
+   nw.grow(MAX_NODES)              
                 
+                   
    """ Normal Simulation (No churn), only messages """
    print "\nNormal Simulation (No churn), only messages"
    print "-------------------------------------------"
@@ -89,7 +115,7 @@ if __name__ == "__main__":
            messages.append(chord.Message(srcID, destID))
        nw.add_messages(messages)               
        nw.tick()
-       #sleep(0.1)
+       #sleep(TICK_DELAY)
        #print "Tick", i
                    
 
@@ -108,6 +134,7 @@ if __name__ == "__main__":
    raw_input("Press ENTER to continue... ") # Pause
 
    for i in range(LENGTH_OF_SIMULATION):       
+       #TODO: if there are no nodes in the network currently, skip this
        leaves = []
        for j in range( randint(0, MAX_RND_CHURN) ):
            node_index = randint(0, len(tester.nodes)-1)
@@ -121,6 +148,7 @@ if __name__ == "__main__":
            joins.append(newNodeID) # assumes no collisions as SIZE_OF_NAMESPACE is large
        nw.add_joins(joins)              
               
+       #TODO: if there are no nodes in the network currently, skip this
        messages = []
        for j in range( randint(0, MAX_MESSAGES) ):
            srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
@@ -133,7 +161,7 @@ if __name__ == "__main__":
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
             
-       sleep(0.1)
+       sleep(TICK_DELAY)
               
        
        
@@ -175,7 +203,7 @@ if __name__ == "__main__":
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
             
-       sleep(0.1)
+       sleep(TICK_DELAY)
        
    
    
@@ -192,7 +220,7 @@ if __name__ == "__main__":
        nw.add_leaves([node])
        for j in range(JOIN_LATENCY): # assuming same JOIN/LEAVE latency
             nw.tick()
-       sleep(0.1)
+       sleep(TICK_DELAY)
 
 
 
