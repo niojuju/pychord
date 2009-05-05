@@ -183,9 +183,11 @@ class Node:
         
 class Network:
     
-    def __init__(self):
+    def __init__(self, logger=None):
         self.name_space_size = 2**NUM_BITS
         self.t = 0
+
+        self.logger = logger
         
         self.nodes = {}
         self.ids = []
@@ -285,6 +287,8 @@ class Network:
                n = Node(self.get_unique_id())
                hook = self.add_node(n) #also returns a hook for the node to join at
                n.join(hook)
+               if self.logger:
+                   self.logger.log_join(n.id)
         
         consumed = []
         for m in chord_messages:
@@ -320,8 +324,14 @@ class Network:
             if num_messages > 0 :
             #   src, dest = self.random_node(), int( random()*self.name_space_size -1)
                 m = self.new_messages.pop()
+                if self.logger:
+                   self.logger.log_msg_sent(m.src, m.dest)
                 self.nodes[m.src].find_successor(m)
                 num_messages = num_messages -1 
+
+         if self.logger:
+            for i in range(chord_messages:
+            
         
         
         

@@ -50,7 +50,7 @@ if __name__ == "__main__":
    logger = chordLogger()
    #nw = pychord.Network(SIZE_OF_NAMESPACE) # should be SIZE_OF_NAMESPACE
 
-   nw = chord.Network()
+   nw = chord.Network(logger)
    
    """ Bootstrap/Initialize network """ 
    # add a fixed number (currently 1) of nodes per tick
