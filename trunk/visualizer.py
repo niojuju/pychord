@@ -11,6 +11,7 @@ _label = Label("", font_size=8, width=80, multiline=True)
 win_width, win_height = 0,0
 
 
+
 #drawing helper functins
 
 def drawLine(p1,p2):
@@ -130,7 +131,7 @@ class ChordWindow(Window):
   
         self.nw = Network()
         self.nw.bootstrap(3)
-        self.nw.grow(32)
+        self.nw.grow(100)
         
         pyglet.clock.schedule(self.update)
     

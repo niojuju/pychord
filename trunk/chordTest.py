@@ -10,7 +10,7 @@ ChordTest :
 # IMPORTS
 from math import log
 from time import sleep
-from random import randint 
+from random import randint, random
 
 import sys
 import pychord
@@ -20,12 +20,12 @@ from chordLogger import *
 
 # CONSTANTS
 # Simulation CONSTANTS
-LENGTH_OF_SIMULATION = 10**2
-TICK_DELAY = 0.1 # in seconds
+LENGTH_OF_SIMULATION = 10**3
+TICK_DELAY = 0.0 # in seconds
 # Chord/Network  CONSTANTS
 SIZE_OF_NAMESPACE = 2**16 # --> passed into Chord-Network
-MAX_NODES = 64      # make 1024 later
-MAX_MESSAGES = MAX_NODES/10   # (generated in any tick)
+MAX_NODES = 1000      # make 1024 later
+MAX_MESSAGES = MAX_NODES/30   # (generated in any tick)
 JOIN_LATENCY = 5 # (approximation) how many ticks it takes for a node to completely finish the join process
 # Logging  CONSTANTS
 VISUALIZE = False # --> passed into Logger
@@ -98,14 +98,21 @@ if __name__ == "__main__":
        # add new messages
        # tick network
        messages = []
-       for j in range( randint(0, MAX_MESSAGES) ): # random no. of messages per tick, but up to MAX_MESSAGES
-           srcID =  nw.random_node().id          #tester.nodes[ randint(0, len(tester.nodes)-1) ]
+       for j in range( randint(0, MAX_MESSAGES/2) ): # random no. of messages per tick, but up to MAX_MESSAGES
+           srcID =  nw.random_node().id            #tester.nodes[ randint(0, len(tester.nodes)-1) ]
            destID = randint(0, nw.name_space_size-1)  #tester.nodes[ randint(0, len(tester.nodes)-1) ]
            messages.append((srcID, destID))
-       nw.add_messages(messages)               
+       nw.add_messages(messages)
+       
+       if random() < 0.02:
+           print "removinf a node"
+           nw.remove_random()
+       if random() < 0.02:
+           print "adding a node"
+           nw.add_random_node()
+       
+       print i
        nw.tick()
-       #sleep(TICK_DELAY)
-       #print "Tick", i
        
        #if we want all messages to finish routing, we have to let teh simualtor run for a little longer (everything should finish in 32 steps for sure though)
        for i in range(32):

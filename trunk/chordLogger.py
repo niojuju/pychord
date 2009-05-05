@@ -109,17 +109,17 @@ class chordLogger:
        
     def log_msg_sent(self, srcID, destID):
        self.total_msgs_sent += 1
-       self.log("Message sent from " + str(srcID) + " to " + str(destID))
+       #self.log("Message sent from " + str(srcID) + " to " + str(destID))
 
     def log_msg_reached(self, srcID, destID, hops):
        self.total_msgs_reached += 1
        self.total_hops_taken_for_reach += hops
-       self.log("Message from " + str(srcID) + " to " + str(destID) + " reached in " + str(hops) + " hops")
+       #self.log("Message from " + str(srcID) + " to " + str(destID) + " reached in " + str(hops) + " hops")
 
     def log_msg_failed(self, srcID, destID, hops, failed_at, trying_to_reach):
        self.total_msgs_failed += 1
        self.total_hops_taken_before_failure += hops
-       self.log("Message from " + str(srcID) + " to " + str(destID) + " failed at node " + str(failed_at) + " trying to reach " + str(trying_to_reach))
+       #self.log("Message from " + str(srcID) + " to " + str(destID) + " failed at node " + str(failed_at) + " trying to reach " + str(trying_to_reach))
        
 """ Self-test: ignore for the purposes of the actual program ... """   
 if __name__ == "__main__":
