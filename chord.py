@@ -36,7 +36,7 @@ class Message:
         
     def fail(self):
         self.status = 'failed'
-        print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
+        #print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
         
     def arrive(self):
         #print self.type,"arrived", self.src, self.dest
@@ -55,7 +55,7 @@ watching = {}
 
 class Node:
     
-    def __init__(self, id, nw, ttl=-1, stabilize_freq=0.1, finger_fix_freq=0.1):
+    def __init__(self, id, nw, ttl=-1, stabilize_freq=1, finger_fix_freq=1):
     # id:  this nodes id/key in the identifier space of teh network
     # nw:  the network teh node is participating in (so we can get node objects by ID)
     # ttl: time to live.  if negative lives forever, decremented each tick. once ttl = 0 node dies
@@ -145,7 +145,7 @@ class Node:
     #  callback: optional function pointer. Teh calback will be called with message as argument when it arrives at final destination
     #  data: optional anything, can be used to attach various data (e.g. finger index so callback knows which finger to update on response)
         if dest == self.id:
-            return #no ned to send yourself a message
+            return #no need to send yourself a message
         m = Message(self.id, dest, type=type, callback=callback, data=data)
         self.messages.append(m)
         #print "sending new message", self.id, m.src, dest,m.dest, type, m.route, m.id
@@ -160,9 +160,10 @@ class Node:
         current_node = self.nw.get_node(msg.route[-1])
         
         #maybe the node we are looking for doesnt exist in the network...the routing fails
-        if (not current_node) or (not current_node.fingers[0]) :
+        if (not current_node) or (not self.nw.get_node(current_node.fingers[0])) :
             msg.fail()
-            print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type            
+            print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
+            #pprint(current_node.fingers)
             return False
 
         
@@ -176,9 +177,13 @@ class Node:
         #we are not there yet, in this case we make a hop to the closest node the current one knows about
         else:
             next_node_id = current_node.closest_preceding_finger(msg.dest)
-            msg.route_to(next_node_id)
-            return next_node_id
-        
+            if self.nw.get_node(next_node_id):
+                msg.route_to(next_node_id)
+                return next_node_id
+            else:
+                msg.fail()
+                return False
+            
         raise Exception, "Routing Error"
         
 
@@ -190,8 +195,9 @@ class Node:
     
         for finger in reversed(self.fingers): 
             if between(finger, self.id , id): #and self.nw.get_node(finger):
-                if not self.nw.get_node(finger):
-                    self.fix_finger(self.fingers.index(finger), foreign_find=True)
+                #i = finger
+                #if not self.nw.get_node(finger):
+                #    self.fix_finger(self.fingers.index(i))
                 return finger
                 
         return self.id 
@@ -233,8 +239,14 @@ class Node:
     def fix_fingers(self):
         finger_index = randint(0,NUM_BITS-1)
         self.fix_finger(finger_index)
-        #for i in range(NUM_BITS):
-        #    if not self.nw.get_node(self.fingers[i]):
+        #self.init_fingers()
+        if self.fingers[0] == self.id:
+            self.fingers[0] = self.fingers[1]
+
+        for i in ( range(len(self.fingers)) ):
+            if not self.nw.get_node(self.fingers[i]):
+                self.fingers[i] = None
+
         #        self.fix_finger(i, foreign_find=True)
 
         
