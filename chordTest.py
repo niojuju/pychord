@@ -58,7 +58,7 @@ class ChordTest:
    """ simple test. full network, all 16 nodes are there, all routing tables are set """   
 
    def tick(self):
-      pass
+      print "",
       # TODO: check if any node's TTL has run out, if has, remove from list
       # assumes that the network will also retire all nodes whose TTL has run out...
    
