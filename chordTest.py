@@ -86,18 +86,6 @@ if __name__ == "__main__":
    raw_input("Press ENTER to continue... ") # Pause
 
    nw.bootstrap(3)
-   
-   # TIME_TO_GROW = JOIN_LATENCY*MAX_NODES
-   # for i in range(MAX_NODES):
-        # newNodeID = randint(1, SIZE_OF_NAMESPACE-1) # Uniformly at Random
-        # # ewNodeTTL = TIME_TO_GROW + Churn_PRNG(LENGTH_OF_SIMULATION)
-        # # IME_TO_GROW -= JOIN_LATENCY # all nodes must start TTL countdown at same time
-        # newNodeTTL = -1
-        # tester.nodes.append((newNodeID, newNodeTTL))
-        # nw.add_joins([newNodeID, newNodeTTL]) # add new nodes for the next tick cycle
-        # for j in range(JOIN_LATENCY):
-            # Tick_All()      
-
    nw.grow(MAX_NODES)              
                 
                    
@@ -113,15 +101,19 @@ if __name__ == "__main__":
        for j in range( randint(0, MAX_MESSAGES) ): # random no. of messages per tick, but up to MAX_MESSAGES
            srcID =  nw.random_node().id          #tester.nodes[ randint(0, len(tester.nodes)-1) ]
            destID = randint(0, nw.name_space_size-1)  #tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           messages.append(chord.Message(srcID, destID))
+           messages.append((srcID, destID))
        nw.add_messages(messages)               
        nw.tick()
        #sleep(TICK_DELAY)
        #print "Tick", i
+       
+       #if we want all messages to finish routing, we have to let teh simualtor run for a little longer (everything should finish in 32 steps for sure though)
+       for i in range(32):
+            nw.tick()
                    
 
    print logger.print_state()
-   sys.exit(0)
+
 ######################################################################
        
        
@@ -154,7 +146,7 @@ if __name__ == "__main__":
        for j in range( randint(0, MAX_MESSAGES) ):
            srcID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
            destID = tester.nodes[ randint(0, len(tester.nodes)-1) ]
-           messages.append(Message(srcID, destID))           
+           messages.append((srcID, destID))           
        nw.add_messages(messages)              
 
        tester.nodes.extend(joins) # add joins[] nodes to tester.nodes lazily
@@ -164,7 +156,7 @@ if __name__ == "__main__":
             
        sleep(TICK_DELAY)
               
-       
+   sys.exit(0)    
        
    """ Simulation with adversarial churn """
    # sort list of nodes present

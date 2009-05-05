@@ -4,199 +4,285 @@ from random import randint, random, choice, paretovariate
 from pprint import pprint
 
 
+
+#helper function for determining whether a key in teh identifier sapce falls between to others
+#  returns true if x is strictly between i and j (x comes after i and before j, not equal to either i or j)
+#  also returns False if x is None or False
 def between(x, i, j):
-   #print i,j, i==j 
-   #if i == j:
-   #   return False
-   if i <= j:
-      #print x >= i and x <=j
-      return x >= i and x <=j
-   else: #this spans the origin
-      return x > i or x<= j
+    if not x:
+        return False
+    
+    if i <= j:
+       return x > i and x <j
+    else: #this spans the origin
+       return x > i or x<j
 
+message_ids = 0
 
-chord_messages = []
 
 class Message:
     
-    def __init__(self, src, dest, msg_type="find"):
+    def __init__(self, src, dest, type="lookup", callback=None, data=None):
+        global message_ids
         self.src = src
         self.dest = dest
-        self.route = []
-        self.message_type = msg_type
+        self.route = [src]
+        self.type = type
+        self.callback = callback
+        self.data = data 
         self.status = 'routing'
-        self.ttl = 10
-        chord_messages.append(self)
+        self.id = message_ids +1
+        message_ids += 1
+        
+    def fail(self):
+        self.status = 'failed'
+        print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
+        
+    def arrive(self):
+        #print self.type,"arrived", self.src, self.dest
+        self.status = 'arrived'
+        if self.callback:
+            self.callback(self)
+        
 
+    def route_to(self, node_id):
+        self.route.append(node_id)
+        if len(self.route)>3 and self.route[-1] == self.route[-2] == self.route[-3]: #were stuck..failed message
+            self.fail()
+            
 
-
+watching = {}
 
 class Node:
     
-    def __init__(self, id, ttl=-1):
+    def __init__(self, id, nw, ttl=-1, stabilize_freq=0.1, finger_fix_freq=0.1):
+    # id:  this nodes id/key in the identifier space of teh network
+    # nw:  the network teh node is participating in (so we can get node objects by ID)
+    # ttl: time to live.  if negative lives forever, decremented each tick. once ttl = 0 node dies
+    # predec:   the node's predecessor (from its point of view)
+    # fingers:  teh finger table (holds node ID's)
+    # messages: a list of messages this node owns and handles at each tick
+    # stabilize_freq/finger_fix_freq: used for determining when/whether to run stabilization protocol
+    
         self.id = id
+        self.nw = nw #so we can get other node objects by ID
+        self.ttl = ttl
         self.predec = None
         self.fingers = [None for i in range(NUM_BITS)]
-        self.down = False
-        self.ttl = ttl
+        self.messages = []
+        
+        #used for determining when/whether to run stabilization protocol
+        self.stabilize_freq = stabilize_freq
+        self.finger_fix_freq = finger_fix_freq
         
         
-    def find_successor(self, msg):
-        if self.down:
-            msg.status = 'fail'
-            return None
-        node = self.find_predecessor(msg) #get as close as possible
-        if node==None or node.down:
-            msg.status = 'fail'
-            return None
-
-        if node.id == msg.dest: #cool we got there
-            msg.status = 'done'
-            return node
-        else: #almost, teh successor of this one is responsible for that key
-            msg.status = 'done'
-            msg.route.append(node.fingers[0].id)
-            return node.fingers[0]
+        self.entry = -1
         
-    def find_predecessor(self, msg):
-        if self.down:
-            msg.status = 'fail'
-            return None
-        id = msg.dest
-
-        if id == self.id:
-            return self
- 
-        node = self        
-        if not node.fingers[0]: 
-            msg.status = 'fail'
-            node.stabilize()
-            return None
-
-        #print "before",node, node.fingers[0]
-        while (node.id != node.fingers[0].id ) and not between(id, node.id, (node.fingers[0].id)):
+    def __str__(self):
+    #so that we can print or cast the node to a string
+        return "Node: " + str(self.id)
+        
     
-
-            node = node.closest_preceding_finger(msg)
+    def die(self):
+        self.predec = None
+        self.messages = None
+        self.fingers = None
     
-            if node==None or node.down or node.fingers[0] == None:
-               msg.status = 'fail'
-               return None
-
-            msg.route.append(node.id)
-            #print "inside",node, node.fingers[0]
-            if node.id == id:
-                return node
+    def tick(self):
+    #is called at each timestep of the network
+    #performs one round of actions
+        
+        #handle this nodes messages 
+        self.handle_messages()
             
-
-
-        return node
-        
-    def closest_preceding_finger(self, msg):
-        if self.down:
-            msg.status = 'fail'
-            return None
-
-        id = msg.dest
-        for i in range(len(self.fingers)-1,-1,-1): #loop backwards
-         if self.fingers[i] and between(self.fingers[i].id, self.id , id):
-            return self.fingers[i]
-        return self
-    
-    
-    def join(self, intro_node):
-        if intro_node:
-            self.predec = None
-            join_msg = Message(intro_node.id, self.id, 'join')
-            self.fingers[0] = intro_node.find_successor(join_msg)
-            self.init_fingers()
-            #move keys ebwteen predec and self from succes to self
-        else: # this is teh first node creating a network
-            for i in range(NUM_BITS):
-                self.fingers[i] = self
-                self.predec = self
-                
-        self.fingers[0].notify(self)
-             
-    def check_dead_links(self):
-        if self.predec == None or self.predec.down == True:
-            self.predec = None
-        for i in range(len(self.fingers)):
-            if self.fingers[i]==None or self.fingers[i].down == True:
-                self.fingers[i] = None
-
-   
-    def stabilize(self):
-        self.check_dead_links()
+        #unless we have succesfully joined teh network, we cant do maintanance
         if not self.fingers[0]:
-            init_msg = Message(self.id, self.id, 'fix')
-            self.fingers[0] = self.find_successor(init_msg)
-            self.fingers[0].notify(self)
-        x = self.fingers[0].predec
-        if x and between(x.id, self.id , self.fingers[0].id) and x.id != self.id:
-            self.fingers[0] = x
-            self.fingers[0].notify(self)
+            return
+            
+        #perform some maintanance
+        if random() < self.stabilize_freq:
+            self.stabilize()
+        if random() < self.finger_fix_freq:
+            self.fix_fingers()
+            
+        if random() < 0.1:
+            self.send_message(self.nw.random_node().id)
+        
+        #one step closer to death..such is life
+        self.ttl -= 1
+        
+        
+    def handle_messages(self):
+    #iterates over all the messages this node owns
+    #  if a message is routing:
+    #  do next hop and remeber the message for the next round
+    
+        still_alive = []
+        for msg in self.messages:
+            if msg.status == 'routing':
+                self.route_message(msg)
+                still_alive.append(msg)
+            if msg.status == 'arrived':
+                pass #log arrive here?       
+            if msg.status == 'failed':
+                pass #log fail here?
+            
+        #only remember teh ones that are still going
+        self.messages = still_alive
+            
+    
+    
+    """
+    Routing Protocol:
+    ################################################################################################
+    """
+    
+        
+    def send_message(self, dest, type='lookup', callback=None, data=None):
+    #Creates a new message orginating at this node
+    #  dest: key/node this is meant for, message will get routed to dest or successor if no node at dest
+    #  type: optional field describing what kind of message this is (used in visualizer to set color)
+    #  callback: optional function pointer. Teh calback will be called with message as argument when it arrives at final destination
+    #  data: optional anything, can be used to attach various data (e.g. finger index so callback knows which finger to update on response)
+        if dest == self.id:
+            return #no ned to send yourself a message
+        m = Message(self.id, dest, type=type, callback=callback, data=data)
+        self.messages.append(m)
+        #print "sending new message", self.id, m.src, dest,m.dest, type, m.route, m.id
+        return m
+    
+    def route_message(self, msg):
+    #This function is called every tick by each node for every message it started
+    #It routes each message one step closer until it reaches the 'successor'.
+    #Messages are rourted until their location = dest or the first node with id > dest.
+        
+        #get the node our message is currently at
+        current_node = self.nw.get_node(msg.route[-1])
+        
+        #maybe the node we are looking for doesnt exist in the network...the routing fails
+        if (not current_node) or (not current_node.fingers[0]) :
+            msg.fail()
+            print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type            
+            return False
+
+        
+        #check whether the current node is immediate predecesor.  in this case the target is its successor
+        if between(msg.dest, current_node.id, current_node.fingers[0]+1):
+            msg.route_to(current_node.fingers[0])
+            msg.arrive()
+            #print "arrived"
+            return current_node.fingers[0]
+        
+        #we are not there yet, in this case we make a hop to the closest node the current one knows about
+        else:
+            next_node_id = current_node.closest_preceding_finger(msg.dest)
+            msg.route_to(next_node_id)
+            return next_node_id
+        
+        raise Exception, "Routing Error"
+        
+
+
+    def closest_preceding_finger(self, id):
+    #Returns teh closest node to id this node knows about
+    #Iterates over fingers in reverse and returns as soon as one is preceeding id.
+    #Returns this nodes ID if no preceeding finger is known
+    
+        for finger in reversed(self.fingers): 
+            if between(finger, self.id , id): #and self.nw.get_node(finger):
+                if not self.nw.get_node(finger):
+                    self.fix_finger(self.fingers.index(finger), foreign_find=True)
+                return finger
+                
+        return self.id 
+    
+    
+
+    
+    
+    
+    """
+    Join Protocol:
+    ################################################################################################
+    """
+    def init_join(self, entry_node):
+        self.entry = entry_node
+        if entry_node:
+            self.predec = None
+            m = entry_node.send_message(self.id, type='join', callback=self.join_response)
+
+    def join_response(self, msg):
+        sucessor = self.nw.get_node(msg.route[-1])
+        self.fingers[0] = sucessor.id
+        sucessor.notify(self.id)
+        self.init_fingers()
+
+    def init_fingers(self):
+        for finger_index in reversed( range(len(self.fingers)) ): 
+            self.fix_finger(finger_index)
+                    
+    def finger_response(self, msg):
+        self.fingers[msg.data] = msg.route[-1]
+    
+    
+    
+    """
+    Stabilization Protcol:
+    ################################################################################################
+    """
+    def fix_fingers(self):
+        finger_index = randint(0,NUM_BITS-1)
+        self.fix_finger(finger_index)
+        #for i in range(NUM_BITS):
+        #    if not self.nw.get_node(self.fingers[i]):
+        #        self.fix_finger(i, foreign_find=True)
+
+        
+    def fix_finger(self, index, foreign_find=False):
+        ideal_finger = (self.id + 2**(index)) % 2**NUM_BITS
+        self.send_message(ideal_finger, type='finger', callback=self.finger_response, data=index)
+ 
+    def stabilize(self):
+        sucessor = self.nw.get_node(self.fingers[0])
+        if not sucessor:
+            return self.fix_fingers()
+        new_sucessor_id = sucessor.predec
+        if between(new_sucessor_id, self.id , self.fingers[0]):
+            self.fingers[0] = new_sucessor_id
+            if self.nw.nodes.has_key(new_sucessor_id):
+                self.nw.get_node(self.fingers[0]).notify(self.id)
         
     def notify(self, pre_node):
-        self.check_dead_links()
-        if (self.predec == None) or between(pre_node.id, self.predec.id, (self.id-1)% (2**NUM_BITS)):
+        if (self.predec == None) or between(pre_node, self.predec, self.id):
             self.predec = pre_node
-            
-    def init_fingers(self):
-        for i in range(len(self.fingers)-1,-1,-1): #loop backwards
-            i_finger_id = (self.id + 2**(i)) % 2**NUM_BITS
-            init_msg = Message(self.id, i_finger_id, 'init')
-            self.fingers[i] = self.find_successor(init_msg)
-            
-            
-    def fix_fingers(self):
-        self.check_dead_links()
-        i = randint(1,NUM_BITS-1)
-        #for i in range(NUM_BITS):
-        #print "fixing node", self.id, i
-        i_finger_id = (self.id + 2**(i)) % 2**NUM_BITS
-        init_msg = Message(self.id, i_finger_id, 'fix')
-        self.fingers[i] = self.find_successor(init_msg)
-        #print "fix: successor of ", i_finger_id, "found as:", self.fingers[i].id, "   id:", self.id, "f: +",2**(i) 
-        #pprint(init_msg.route)
-            
-
-    def shutdown(self):
-        self.down = True
 
 
 
-    def __str__(self):
-        ret = "Node: " + str(self.id) +"\n"
-        return ret
-        if self.predec: ret += "Predecessor: "+str(self.predec.id)+" \n"
-        else:           ret += "Predecessor: NONE \n"
-        
-        ret += "Fingers: "
-        for f in self.fingers:
-            if f: ret += str(f.id) + ", "
-            else: ret += "-,"
-        return ret
+    
+
+
+
         
         
         
         
+from chordLogger import chordLogger
         
 class Network:
     
-    def __init__(self, logger=None):
+    def __init__(self, logger=None):
+
         self.name_space_size = 2**NUM_BITS
         self.t = 0
 
-        self.logger = logger
-        
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = chordLogger()
         self.nodes = {}
-        self.ids = []
 
         self.max_size = 500
         self.growing = False 
-
-        self.new_messages = []
         
         #parameters for randomization/eventdistribution
         
@@ -210,48 +296,23 @@ class Network:
         self.fix_rate = 0.4
         self.stabilize_rate = 0.3
         self.message_rate = 0.6
-        
-        
-    def bootstrap(self, num_nodes=3):
-    #bootstraps the network with num_nodes inital nodes evenly distriubuted, with predecessors set and finger spointing at successors
 
-        last_node = None
-        for i in range(1,self.name_space_size, self.name_space_size/num_nodes):
-            self.nodes[i] = Node(i)
-            self.ids.append(i)
-            
-            self.nodes[i].predec = last_node #set predecessor
-            if last_node: #set finger table of predecessor to current node
-                last_node.fingers = [self.nodes[i] for x in range(NUM_BITS)]
-            last_node = self.nodes[i]
- 
-        self.nodes[self.ids[0]].predec = last_node #predecessor of first node is teh last one
-        last_node.fingers = [self.nodes[self.ids[0]] for x in range(NUM_BITS) ] #finger table fo last node
-      
-      
-    def add_node(self, node):
-        hook = self.random_node()
-        self.nodes[node.id] = node
-        self.ids.append(node.id)
-        if self.logger:
-           self.logger.log_join(node.id) 
-        return hook
-      
-      
-    def add_joins(self, node_joins):
-       for join in node_join:
-            id, ttl = join
-            node = Node(id, ttl)
-            self.add_node(node)
-      
-    def add_leaves(self, leaves):
-       for leave_id in node_join:
-            self.remove_node(leave)
-      
-      
+
+
+    def tick(self):
+        for n in self.nodes.values():
+            n.tick()
+
+
+    def get_node(self, node_id):
+        if node_id in self.nodes:
+            return self.nodes[node_id]
+        else:
+            #print "accessing missing node: ", node_id
+            return None
+        
     def random_node(self):
-        return self.nodes[choice(self.ids)]
-      
+        return self.nodes[choice(self.nodes.keys())]
         
     def get_unique_id(self):
         #returns an unused ID
@@ -259,30 +320,52 @@ class Network:
         while self.nodes.has_key(newID):
             newID = randint(0,self.name_space_size)
         return newID
+        
+        
+    def bootstrap(self, num_nodes=3):
+    #bootstraps the network with num_nodes inital nodes evenly distriubuted, with predecessors set and fingers pointing at successors
+        last_node = None
+        for i in range(1,self.name_space_size, self.name_space_size/num_nodes):
+            #print "booting node:", i
+            self.nodes[i] = Node(i, self)            
+            
+            if last_node: #set finger table of predecessor to current node
+                self.nodes[i].predec = last_node.id #set predecessor
+                last_node.fingers = [self.nodes[i].id for x in range(NUM_BITS)]
+            last_node = self.nodes[i]
+ 
+        self.nodes[1].predec = last_node.id #predecessor of first node is teh last one
+        last_node.fingers = [self.nodes[1].id for x in range(NUM_BITS) ] #finger table fo last node
+      
       
     def grow(self, num_nodes):
         self.growing = True
         #keep taking stes to grows teh network using random joins until num_nodes are participating
         while len(self.nodes) < num_nodes:
-            
-            #some joins will occur
-            for i in range(paretovariate(self.concurent_join_alpha)):
-                n = Node(self.get_unique_id())
-                hook = self.add_node(n) #also returns a hook for the node to join at
-                n.join(hook)
-  
-         
             self.tick()
+            if random() < 0.4:
+                id = self.get_unique_id()
+                n = Node(id, self)
+                
+                self.add_node(n) #also returns a hook for the node to join at
+                
+        
         self.growing = False
 
-
-
+    def add_node(self, node):
+        node.init_join(self.random_node())
+        self.nodes[node.id] = node
+        self.logger.log_join(node.id)
+        
+    def add_random_node(self):
+        n = Node(self.get_unique_id(), self)
+        self.add_node(n)
+        
+      
     def remove_node(self, id):
-       self.ids.remove(id)
-       self.nodes[id].shutdown()
+       self.nodes[id].die()
        del self.nodes[id]
-       if self.logger:
-           self.logger.log_leave(n.id) 
+       self.logger.log_leave(id) 
 
 
     def remove_random(self):
@@ -291,84 +374,38 @@ class Network:
         
 
     def add_messages(self, messages):
-       self.new_messages = messages
-
-
-    def tick(self):
-        global chord_messages
-        
-        
-        for n in self.nodes.values():
-           n.check_dead_links()
-
-        #add joins based on join rate
-        #if len(self.nodes)<self.max_size and random() < self.churn_rate:
-        #    for i in range(paretovariate(int(self.concurent_join_alpha))):
-        #       n = Node(self.get_unique_id())
-        #       hook = self.add_node(n) #also returns a hook for the node to join at
-        #       n.join(hook)
-        #       if self.logger:
-        #           self.logger.log_join(n.id)
-        
-        consumed = []
-        for m in chord_messages:
-             m.ttl -= 1
-             if m.ttl < 1:
-                consumed.append(m)
-
-        for m in consumed:
-            chord_messages.remove(m)
-
-         
-
-
+       for m in messages:
+            self.nodes[m[0]].send_message(m[1], callback=self.log_message_result)
+            self.logger.log_msg_sent(*m)
+            
+    def log_message_result(self, m):
+        if m.status == 'arrived':
+            self.logger.log_msg_reached(m.src, m.dest, len(m.route))
+        if m.status == 'failed':
+            self.logger.log_msg_failed( m.src, m.dest, len(m.route), m.route[-1], m.dest)
       
-        #run the stabilization and fix_finger protocol on soem of teh nodes in teh network
-        num_fixes      = len(self.nodes)* self.fix_rate
-        num_stabilizes = len(self.nodes)* self.stabilize_rate
-        #num_messages   = len(self.nodes)* self.message_rate auto generate messages
-        num_messages = len(self.new_messages)
-        if self.growing: 
-            num_messages = 0
-
-        while num_fixes > 0 or num_stabilizes > 0 or num_messages > 0:
-            
-
-            if num_fixes > 0:
-                self.random_node().fix_fingers()
-                num_fixes = num_fixes -1
-            if num_stabilizes > 0:
-                self.random_node().stabilize()
-                num_stabilizes = num_stabilizes -1        
-            if num_messages > 0 :
-            #   src, dest = self.random_node(), int( random()*self.name_space_size -1)
-                m = self.new_messages.pop()
-                if self.logger:
-                   self.logger.log_msg_sent(m.src, m.dest)
-                self.nodes[m.src].find_successor(m)
-                
-                if m.status == 'done':
-                  self.logger.log_msg_reached(m.src, m.dest, len(m.route))
-                elif m.status == 'fail':
-                  self.logger.log_msg_failed(m.src, m.dest, len(m.route))
-                else:
-                  "Message that isnt doing anything??"
-                
-                num_messages = num_messages -1 
+      
+    def add_joins(self, node_joins):
+       for join in node_join:
+            id, ttl = join
+            node = Node(id, self, ttl=ttl)
+            node.init_join(self.random_node())
+            self.add_node(node)
+      
+    def add_leaves(self, leaves):
+       for leave_id in node_join:
+            self.remove_node(leave)
+      
 
 
-            
-        
-        
-        
-        
-        
-        
-        
+
 if __name__ == "__main__":
     chord = Network()
+    print "boot"
     chord.bootstrap(3)
-    chord.grow(1000)
+    
+    print "growing"
+    chord.grow(12)
         
     print "DONE"
     
