@@ -17,7 +17,7 @@ def between(x, i, j):
     else: #this spans the origin
        return x > i or x<j
 
-message_ids = 0
+
 
 
 class Message:
@@ -34,9 +34,10 @@ class Message:
         self.id = message_ids +1
         message_ids += 1
         
-    def fail(self):
+    def fail(self, fail_id):
         self.status = 'failed'
-        #print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
+        #print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type, "failed due to:", fail_id
+        
         
     def arrive(self):
         #print self.type,"arrived", self.src, self.dest
@@ -47,15 +48,17 @@ class Message:
 
     def route_to(self, node_id):
         self.route.append(node_id)
-        if len(self.route)>3 and self.route[-1] == self.route[-2] == self.route[-3]: #were stuck..failed message
-            self.fail()
+        #if len(self.route)>3 and self.route[-1] == self.route[-2] == self.route[-3]: #were stuck..failed message
+        #    self.fail()
             
 
-watching = {}
+
+message_ids = 0
+
 
 class Node:
     
-    def __init__(self, id, nw, ttl=-1, stabilize_freq=1, finger_fix_freq=1):
+    def __init__(self, id, nw, ttl=-1, stabilize_freq=.1, finger_fix_freq=.1):
     # id:  this nodes id/key in the identifier space of teh network
     # nw:  the network teh node is participating in (so we can get node objects by ID)
     # ttl: time to live.  if negative lives forever, decremented each tick. once ttl = 0 node dies
@@ -70,13 +73,12 @@ class Node:
         self.predec = None
         self.fingers = [None for i in range(NUM_BITS)]
         self.messages = []
+        self.finger_fails = [0 for i in range(NUM_BITS)]
         
         #used for determining when/whether to run stabilization protocol
         self.stabilize_freq = stabilize_freq
         self.finger_fix_freq = finger_fix_freq
         
-        
-        self.entry = -1
         
     def __str__(self):
     #so that we can print or cast the node to a string
@@ -95,9 +97,6 @@ class Node:
         #handle this nodes messages 
         self.handle_messages()
             
-        #unless we have succesfully joined teh network, we cant do maintanance
-        if not self.fingers[0]:
-            return
             
         #perform some maintanance
         if random() < self.stabilize_freq:
@@ -105,11 +104,24 @@ class Node:
         if random() < self.finger_fix_freq:
             self.fix_fingers()
             
-        if random() < 0.1:
-            self.send_message(self.nw.random_node().id)
-        
+        #if random() < 0.1:
+        #    self.send_message(self.nw.random_node().id)
+           
+        """
+        for i in range(len(self.fingers)):
+            if not self.nw.get_node(self.fingers[i]):
+                print "Faulty Finger!", self.id, i, self.fingers[i]
+                self.finger_fails[i] += 1
+                if self.finger_fails[i] > 10:
+                    
+ 
+                
+                #else:
+                #    self.fix_finger(i)
+        """
         #one step closer to death..such is life
         self.ttl -= 1
+    
         
         
     def handle_messages(self):
@@ -144,11 +156,11 @@ class Node:
     #  type: optional field describing what kind of message this is (used in visualizer to set color)
     #  callback: optional function pointer. Teh calback will be called with message as argument when it arrives at final destination
     #  data: optional anything, can be used to attach various data (e.g. finger index so callback knows which finger to update on response)
-        if dest == self.id:
-            return #no need to send yourself a message
+#        if dest == self.id:
+#            return #no need to send yourself a message
+        
         m = Message(self.id, dest, type=type, callback=callback, data=data)
         self.messages.append(m)
-        #print "sending new message", self.id, m.src, dest,m.dest, type, m.route, m.id
         return m
     
     def route_message(self, msg):
@@ -160,18 +172,15 @@ class Node:
         current_node = self.nw.get_node(msg.route[-1])
         
         #maybe the node we are looking for doesnt exist in the network...the routing fails
-        if (not current_node) or (not self.nw.get_node(current_node.fingers[0])) :
-            msg.fail()
-            print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
-            #pprint(current_node.fingers)
+        if (not current_node) or len(msg.route)> 20:
+            msg.fail(msg.route[-1])
             return False
 
         
         #check whether the current node is immediate predecesor.  in this case the target is its successor
-        if between(msg.dest, current_node.id, current_node.fingers[0]+1):
+        if self.nw.get_node(current_node.fingers[0]) and between(msg.dest, current_node.id, current_node.fingers[0]+1):
             msg.route_to(current_node.fingers[0])
             msg.arrive()
-            #print "arrived"
             return current_node.fingers[0]
         
         #we are not there yet, in this case we make a hop to the closest node the current one knows about
@@ -181,11 +190,22 @@ class Node:
                 msg.route_to(next_node_id)
                 return next_node_id
             else:
-                msg.fail()
+                try:
+                    fi = current_node.fingers.index(next_node_id)
+                    current_node[fi] = current_node[fi+1]
+                except:
+                    pass
+                msg.fail(next_node_id)
+                #pprint (self.nw.get_node(msg.route[-1]).fingers)
                 return False
             
         raise Exception, "Routing Error"
         
+    def first_valid_finger(self):
+        for f in self.fingers:
+            if f and self.nw.get_node(f):
+                return f
+        #print self.id, "no valid fingers!" #need to rejoin?
 
 
     def closest_preceding_finger(self, id):
@@ -194,10 +214,7 @@ class Node:
     #Returns this nodes ID if no preceeding finger is known
     
         for finger in reversed(self.fingers): 
-            if between(finger, self.id , id): #and self.nw.get_node(finger):
-                #i = finger
-                #if not self.nw.get_node(finger):
-                #    self.fix_finger(self.fingers.index(i))
+            if between(finger, self.id , id): 
                 return finger
                 
         return self.id 
@@ -212,7 +229,6 @@ class Node:
     ################################################################################################
     """
     def init_join(self, entry_node):
-        self.entry = entry_node
         if entry_node:
             self.predec = None
             m = entry_node.send_message(self.id, type='join', callback=self.join_response)
@@ -228,6 +244,8 @@ class Node:
             self.fix_finger(finger_index)
                     
     def finger_response(self, msg):
+        #$if self.id in watching:
+            #print self.id, "RESET TO ", msg.route[-1], msg.status
         self.fingers[msg.data] = msg.route[-1]
     
     
@@ -237,29 +255,43 @@ class Node:
     ################################################################################################
     """
     def fix_fingers(self):
-        finger_index = randint(0,NUM_BITS-1)
-        self.fix_finger(finger_index)
-        #self.init_fingers()
-        if self.fingers[0] == self.id:
-            self.fingers[0] = self.fingers[1]
-
-        for i in ( range(len(self.fingers)) ):
+        #finger_index = randint(0,NUM_BITS-1)
+        #self.fix_finger(finger_index)
+        #print self.id, "fixing fingers"
+        for i in range(len(self.fingers)):
             if not self.nw.get_node(self.fingers[i]):
-                self.fingers[i] = None
-
-        #        self.fix_finger(i, foreign_find=True)
+                self.fix_finger(i)
 
         
-    def fix_finger(self, index, foreign_find=False):
+    def fix_finger(self, index):
         ideal_finger = (self.id + 2**(index)) % 2**NUM_BITS
         self.send_message(ideal_finger, type='finger', callback=self.finger_response, data=index)
- 
+        
+        """
+        if self.finger_fails[index] < 10:
+            self.send_message(ideal_finger, type='finger', callback=self.finger_response, data=index)
+        elif self.finger_fails[index] < 20:
+            watching.append(self.id)
+            print self.id, index, "force fix!", "bad:", self.fingers[index]
+            while not self.nw.get_node(self.fingers[index]):
+                if self.nw.nodes.has_key(ideal_finger):
+                    self.fingers[index] = ideal_finger
+                    print "found ", index, ideal_finger
+                    print "done", self.id, self.fingers[index]
+                else:
+                    ideal_finger +=1  % 2**NUM_BITS
+            self.finger_fails[index] = 0
+        """
     def stabilize(self):
-        sucessor = self.nw.get_node(self.fingers[0])
+        sucessor = self.nw.get_node(self.first_valid_finger())
+        #print self.id, "stabilizing"
         if not sucessor:
-            return self.fix_fingers()
+            #print self.id, 'has no valid finger at all' #need to rejoin?
+            return
+            
+        #if there is a node between myself and my successor, that node becomes my successor
         new_sucessor_id = sucessor.predec
-        if between(new_sucessor_id, self.id , self.fingers[0]):
+        if between(new_sucessor_id, self.id , sucessor.id):
             self.fingers[0] = new_sucessor_id
             if self.nw.nodes.has_key(new_sucessor_id):
                 self.nw.get_node(self.fingers[0]).notify(self.id)
