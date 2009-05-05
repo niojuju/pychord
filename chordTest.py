@@ -89,11 +89,11 @@ if __name__ == "__main__":
            messages.append(chord.Message(srcID, destID))
        nw.add_messages(messages)               
        nw.tick()
-       sleep(0.1)
+       #sleep(0.1)
        #print "Tick", i
                    
 
-
+   print logger.print_state()
    sys.exit(0)
 ######################################################################
        
