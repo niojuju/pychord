@@ -5,6 +5,11 @@ from pprint import pprint
 from chordLogger import *
 
 
+CHURN_DIE = 0.01
+CHURN_JOIN = 0.01
+
+
+
 #helper function for determining whether a key in teh identifier sapce falls between to others
 #  returns true if x is strictly between i and j (x comes after i and before j, not equal to either i or j)
 #  also returns False if x is None or False
@@ -36,6 +41,8 @@ class Message:
         
     def fail(self):
         self.status = 'failed'
+        if self.callback and self.type == 'lookup':
+            self.callback(self)
         print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
         
     def arrive(self):
@@ -56,8 +63,8 @@ watching = {}
 class Node:
     
     def __init__(self, id, nw, ttl=-1,
-                 stabilize_freq=0.05,
-                 finger_fix_freq=0.05,
+                 stabilize_freq=0.1,
+                 finger_fix_freq=0.1,
                  random_routing_freq=0.0,
                  random_routing_type='unifrom',
                  replication_type='none',
@@ -125,8 +132,10 @@ class Node:
             self.fix_fingers()
             
         if random() < 0.2:
-            self.send_message(self.nw.random_node().id)
-        
+            dest = self.nw.random_node().id
+            self.send_message(dest, callback=self.nw.log_message_result)
+            self.nw.logger.log_msg_sent(self.id, dest)
+            
         #one step closer to death..such is life
         self.ttl -= 1
         
@@ -200,6 +209,24 @@ class Node:
             next_node_id = current_node.closest_preceding_finger(msg.dest)
             msg.route_to(next_node_id)
             return next_node_id
+        
+#we are not there yet, in this case we make a hop to the closest node the current one knows about
+        #else:
+        #    next_node_id = current_node.closest_preceding_finger(msg.dest)
+        #    if self.nw.get_node(next_node_id):
+        #        msg.route_to(next_node_id)
+        #        return next_node_id
+        #    else:
+        #        try:
+        #            #try all smaler fingers and sucessors before failing
+                    
+        #            fi = current_node.fingers.index(next_node_id)
+        #            current_node[fi] = current_node[fi-1]
+        #        except:
+        #            pass
+        #        msg.fail()
+                #pprint (self.nw.get_node(msg.route[-1]).fingers)
+         #       return False
         
         
         
@@ -276,7 +303,7 @@ class Node:
     def stabilize(self):
         sucessor = self.nw.get_node(self.fingers[0])
         if not sucessor:
-            return self.fix_fingers()
+            return self.fix_fsucessor()
         new_sucessor_id = sucessor.predec
         if between(new_sucessor_id, self.id , self.fingers[0]):
             self.fingers[0] = new_sucessor_id
@@ -297,9 +324,12 @@ class Node:
     def sync_backups(self):
         sucessor = self.nw.get_node(self.fingers[0])
         if sucessor:
-            self.sucessor_backups[0] = sucessor.fingers[0]
-            for i in range(0,len(self.sucessor_backups)-1):
-                self.sucessor_backups[i+1] = sucessor.sucessor_backups[i]
+            self.sucessor_backups[0] = sucessor.id
+            for i in range(1,len(self.sucessor_backups)):
+                if sucessor:
+                    self.sucessor_backups[i] = sucessor.id
+                    sucessor = self.nw.get_node(sucessor.fingers[0])
+                    
 
     
 
@@ -380,7 +410,7 @@ class Network:
         #keep taking stes to grows teh network using random joins until num_nodes are participating
         while len(self.nodes) < num_nodes:
             self.tick()
-            if random() < 0.05:
+            if random() < 0.1:
                 id = self.get_unique_id()
                 n = Node(id, self)
                 
@@ -408,7 +438,8 @@ class Network:
 
     def remove_random(self):
         node = self.random_node()
-        self.remove_node(node.id)
+        if node.ttl < -20:
+            self.remove_node(node.id)
         
 
     def add_messages(self, messages):
@@ -420,6 +451,7 @@ class Network:
         if m.status == 'arrived':
             self.logger.log_msg_reached(m.src, m.dest, len(m.route))
         if m.status == 'failed':
+            #print "ogging failed"
             self.logger.log_msg_failed( m.src, m.dest, len(m.route), m.route[-1], m.dest)
       
       
@@ -443,11 +475,20 @@ if __name__ == "__main__":
     chord.bootstrap(3)
     
     print "growing"
-    chord.grow(512)
+    chord.grow(500)
     
-    for i in range(500):
+    for i in range(400):
         chord.tick()
-        if i%10 ==0 :
+        chord.logger.update_state()
+        if random() < CHURN_DIE:
+            chord.remove_random()
+            
+        if random() < CHURN_JOIN:
+            chord.add_random_node()
+            
+        if i%10 ==0:
             print i
         
+        
+    chord.logger.print_state()
     print "DONE"

@@ -13,7 +13,9 @@ from time import sleep
 from random import randint, random
 
 import sys
+import pychord
 import chord
+import chordViz
 from chordLogger import *
 
 # CONSTANTS
@@ -22,7 +24,7 @@ LENGTH_OF_SIMULATION = 10**3
 TICK_DELAY = 0.0 # in seconds
 # Chord/Network  CONSTANTS
 SIZE_OF_NAMESPACE = 2**16 # --> passed into Chord-Network
-MAX_NODES = 1000      # make 1024 later
+MAX_NODES = 400      # make 1024 later
 MAX_MESSAGES = MAX_NODES/30   # (generated in any tick)
 JOIN_LATENCY = 5 # (approximation) how many ticks it takes for a node to completely finish the join process
 # Logging  CONSTANTS
