@@ -8,8 +8,8 @@ from chordLogger import *
 NUM_NODES            = 1000     #The number of nodes in teh network
 LENGTH_OF_SIMULATION = 1000     #number of ticks to simulate
 MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups
-CHURN_DIE            = 0.05     #The frequency at which nodes will leave the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
-CHURN_JOIN           = 0.05     #The frequency at which nodes will join the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
+CHURN_DIE            = 1     #The frequency at which nodes will leave the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
+CHURN_JOIN           = 1     #The frequency at which nodes will join the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
 STABILIZE_FREQ       = 0.1      #The frequency at which nodes will run the fix_fingers protocol
 FIX_FINGER_FREQ      = 0.1      #The frequency at which nodes will run the stabilize protocol
 RANDOM_ROUTING_FREQ  = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
