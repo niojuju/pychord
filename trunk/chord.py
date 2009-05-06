@@ -397,7 +397,7 @@ class Network:
     def add_random_node(self):
         n = Node(self.get_unique_id(), self)
         self.add_node(n)
-        self.logger.log_join(node.id)
+
         
       
     def remove_node(self, id):
