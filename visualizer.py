@@ -131,7 +131,7 @@ class ChordWindow(Window):
   
         self.nw = Network()
         self.nw.bootstrap(3)
-        self.nw.grow(100)
+        self.nw.grow(12)
         
         pyglet.clock.schedule(self.update)
     

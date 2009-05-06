@@ -63,7 +63,7 @@ class chordLogger:
         if self.total_msgs_reached != 0:
             self.avg_hops_to_reach = float(self.total_hops_taken_for_reach) / float(self.total_msgs_reached)
         if self.total_msgs_failed != 0:
-            self.avg_hops_before_failure = self.total_hops_taken_before_failure / self.total_msgs_failed        
+            self.avg_hops_before_failure = float(self.total_hops_taken_before_failure) / self.total_msgs_failed        
         print "[chordLogger] Updating internal state variables " 
  
     def print_state(self):
