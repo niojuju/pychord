@@ -11,7 +11,7 @@ Chord Logging / Metrics collection tool
 
 """
 
-from chordTest import *
+#from chordTest import *
 
 DISPLAY_INTERVAL = 5
 
@@ -24,12 +24,12 @@ class chordLogger:
         self.t = 0
 
         # Instantiate log-file / viz.
-        if VISUALIZE is True: 
-           print "[chordLogger] Will visualize"
+        #if VISUALIZE is True: 
+        #  print "[chordLogger] Will visualize"
            #viz = ChordWindow()
-        if LOG_TO_FILE is True: 
-           print "[chordLogger] Will log messages to file"
-           """ Open file and stuff """
+        #if LOG_TO_FILE is True: 
+        #   print "[chordLogger] Will log messages to file"
+        #   """ Open file and stuff """
            
         # Initialize metrics collection variables
         # Nodes
@@ -51,23 +51,23 @@ class chordLogger:
        # to console
        print logString 
        # to viz
-       if VISUALIZE is True: 
-           print "[chordLogger] Will write to viz: ", logString 
+       #if VISUALIZE is True: 
+       #    print "[chordLogger] Will write to viz: ", logString 
        # to file
-       if LOG_TO_FILE is True: 
-           print "[chordLogger] Will write to file: ", logString 
+       #if LOG_TO_FILE is True: 
+       #    print "[chordLogger] Will write to file: ", logString 
 
     def update_state(self):
-        """ Updates internal state variables a.k.a. Metrics collected """
+        #""" Updates internal state variables a.k.a. Metrics collected """
         self.current_nodes_in_network = self.total_joins - self.total_leaves - self.total_fails
         if self.total_msgs_reached != 0:
             self.avg_hops_to_reach = float(self.total_hops_taken_for_reach) / float(self.total_msgs_reached)
         if self.total_msgs_failed != 0:
             self.avg_hops_before_failure = self.total_hops_taken_before_failure / self.total_msgs_failed        
-        print "[chordLogger] Updating internal state variables " 
+        #print "[chordLogger] Updating internal state variables " 
  
     def print_state(self):
-	self.update_state()
+        self.update_state()
         print "current_nodes_in_network ", self.current_nodes_in_network
         print "avg_hops_to_reach ", self.avg_hops_to_reach
         print "total_msgs_sent ", self.total_msgs_sent        
