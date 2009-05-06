@@ -63,7 +63,7 @@ class chordLogger:
         if self.total_msgs_reached != 0:
             self.avg_hops_to_reach = float(self.total_hops_taken_for_reach) / float(self.total_msgs_reached)
         if self.total_msgs_failed != 0:
-            self.avg_hops_before_failure = float(self.total_hops_taken_before_failure) / self.total_msgs_failed        
+            self.avg_hops_before_failure = self.total_hops_taken_before_failure / self.total_msgs_failed        
         print "[chordLogger] Updating internal state variables " 
  
     def print_state(self):
@@ -73,7 +73,7 @@ class chordLogger:
         print "total_msgs_sent ", self.total_msgs_sent        
         print "total_msgs_reached ", self.total_msgs_reached
         print "total_node_failures ", self.total_fails
-        print "failure rate: ", float(self.total_fails+1)/float(self.total_msgs_sent+1)
+        print "failure rate: ", float(self.total_msgs_failed)/float(self.total_msgs_sent+1), "  ", self.total_msgs_failed,"/", self.total_msgs_sent
         
         
  
@@ -119,7 +119,7 @@ class chordLogger:
     def log_msg_failed(self, srcID, destID, hops, failed_at, trying_to_reach):
        self.total_msgs_failed += 1
        self.total_hops_taken_before_failure += hops
-       #self.log("Message from " + str(srcID) + " to " + str(destID) + " failed at node " + str(failed_at) + " trying to reach " + str(trying_to_reach))
+       self.log("Message from " + str(srcID) + " to " + str(destID) + " failed at node " + str(failed_at) + " trying to reach " + str(trying_to_reach))
        
 """ Self-test: ignore for the purposes of the actual program ... """   
 if __name__ == "__main__":
