@@ -72,7 +72,8 @@ class chordLogger:
         print "avg_hops_to_reach ", self.avg_hops_to_reach
         print "total_msgs_sent ", self.total_msgs_sent        
         print "total_msgs_reached ", self.total_msgs_reached
-        print "total_node_failures ", self.total_fails
+        print "total_node_joins ", self.total_joins
+        print "total_node_leaves ", self.total_leaves
         print "failure rate: ", float(self.total_msgs_failed)/float(self.total_msgs_sent+1), "  ", self.total_msgs_failed,"/", self.total_msgs_sent
         
         
@@ -97,11 +98,11 @@ class chordLogger:
    
     def log_join(self, nodeID):
        self.total_joins += 1
-       self.log("Node Join: " + str(nodeID))
+       #self.log("Node Join: " + str(nodeID))
        
     def log_leave(self, nodeID):
        self.total_leaves += 1
-       self.log("Node Leave: " + str(nodeID))
+       #self.log("Node Leave: " + str(nodeID))
 
     def log_fail(self, nodeID):
        self.total_fails += 1
