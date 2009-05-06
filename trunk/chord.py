@@ -10,9 +10,9 @@ LENGTH_OF_SIMULATION = 1000     #number of ticks to simulate
 MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
 CHURN_DIE            = 0.02     #The frequency at which nodes will leave the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
 CHURN_JOIN           = 0.02     #The frequency at which nodes will join the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
-CHURN_TIME           = 20       #CHURN rates/percentages are relative to this many ticks. eg. 0.02 churn and 50 churn_time means 2% of nodes every 20 ticks
-MAX_CONCURENT_JOIN   = 10       # max number of nodes join/leave in one tick
-MAX_CONCURENT_DIE    = 10       # max number of nodes join/leave in one tick
+CHURN_TIME           = 1000       #CHURN rates/percentages are relative to this many ticks. eg. 0.02 churn and 50 churn_time means 2% of nodes every 20 ticks
+MAX_CONCURENT_JOIN   = 2       # max number of nodes join/leave in one tick
+MAX_CONCURENT_DIE    = 2       # max number of nodes join/leave in one tick
 STABILIZE_FREQ       = 0.1      #The frequency at which nodes will run the fix_fingers protocol
 FIX_FINGER_FREQ      = 0.1      #The frequency at which nodes will run the stabilize protocol
 RANDOM_ROUTING_FREQ  = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
@@ -329,7 +329,7 @@ class Node:
     def stabilize(self):
         sucessor = self.nw.get_node(self.fingers[0])
         if not sucessor:
-            return self.fix_fsucessor()
+            return self.fix_sucessor()
         new_sucessor_id = sucessor.predec
         if between(new_sucessor_id, self.id , self.fingers[0]):
             self.fingers[0] = new_sucessor_id
@@ -502,6 +502,7 @@ AVERAGE_DIE_PER_CHURN_ROUND = float(CHURN_DIE)*NUM_NODES
 AVERAGE_DIES_PER_ROUND = float(MAX_CONCURENT_DIE)*0.5 
 CHANCE_OF_DIES = AVERAGE_DIES_PER_ROUND/AVERAGE_JOINS_PER_CHURN_ROUND
 
+
 if __name__ == "__main__":
     chord = Network()
     print "boot"
@@ -514,20 +515,23 @@ if __name__ == "__main__":
         chord.tick()
         chord.logger.update_state()
 
-
-    if random() < CHANCE_OF_JOINS:
-        num_joins =  int(random()*MAX_CONCURENT_JOIN)
-        for i in range(num_joins):
-            chord.add_random_node()
-        
-    if random() < CHANCE_OF_LEAVES:
-        num_leaves =  int(random()*CHANCE_OF_DIES)
-        for i in range(num_leaves):
-            chord.remove_random()
-
+        if random() < CHANCE_OF_JOINS:
             
-    if i%50 ==0:
-        print i
+            num_joins =  int(random()*MAX_CONCURENT_JOIN)
+            for i in range(num_joins):
+                print "node joining"
+                chord.add_random_node()
+            
+        if random() < CHANCE_OF_DIES:
+            
+            num_leaves =  int(random()*MAX_CONCURENT_DIE)
+            for i in range(num_leaves):
+                print "node leaving"
+                chord.remove_random()
+    
+                
+        if i%50 ==0:
+            print i
         
         
     chord.logger.print_state()
