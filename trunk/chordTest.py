@@ -13,9 +13,7 @@ from time import sleep
 from random import randint, random
 
 import sys
-import pychord
 import chord
-import chordViz
 from chordLogger import *
 
 # CONSTANTS
