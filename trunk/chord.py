@@ -5,8 +5,16 @@ from pprint import pprint
 from chordLogger import *
 
 
-CHURN_DIE = 0.01
-CHURN_JOIN = 0.01
+NUM_NODES            = 1000     #The number of nodes in teh network
+LENGTH_OF_SIMULATION = 1000     #number of ticks to simulate
+MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups
+CHURN_DIE            = 0.05     #The frequency at which nodes will leave the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
+CHURN_JOIN           = 0.05     #The frequency at which nodes will join the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
+STABILIZE_FREQ       = 0.1      #The frequency at which nodes will run the fix_fingers protocol
+FIX_FINGER_FREQ      = 0.1      #The frequency at which nodes will run the stabilize protocol
+RANDOM_ROUTING_FREQ  = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
+REPLICATION_TYPE     ='none'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
+
 
 
 
@@ -23,7 +31,7 @@ def between(x, i, j):
        return x > i or x<j
 
 message_ids = 0
-
+FAILS = 0
 
 class Message:
     
@@ -40,10 +48,11 @@ class Message:
         message_ids += 1
         
     def fail(self):
+        global FAILS
         self.status = 'failed'
         if self.callback and self.type == 'lookup':
             self.callback(self)
-        print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
+            #print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
         
     def arrive(self):
         #print self.type,"arrived", self.src, self.dest
@@ -63,11 +72,10 @@ watching = {}
 class Node:
     
     def __init__(self, id, nw, ttl=-1,
-                 stabilize_freq=0.1,
-                 finger_fix_freq=0.1,
-                 random_routing_freq=0.0,
-                 random_routing_type='unifrom',
-                 replication_type='none',
+                 stabilize_freq=STABILIZE_FREQ,
+                 finger_fix_freq=FIX_FINGER_FREQ,
+                 random_routing_freq=RANDOM_ROUTING_FREQ,
+                 replication_type=REPLICATION_TYPE,
                  ):
     # id:  this nodes id/key in the identifier space of teh network
     # nw:  the network teh node is participating in (so we can get node objects by ID)
@@ -111,6 +119,7 @@ class Node:
         self.predec = None
         self.messages = None
         self.fingers = None
+        self.nw.remove_node(self.id)
     
     def tick(self):
     #is called at each timestep of the network
@@ -131,13 +140,15 @@ class Node:
         if random() < self.finger_fix_freq:
             self.fix_fingers()
             
-        if random() < 0.2:
+        if random() < MESSAGE_FREQ:
             dest = self.nw.random_node().id
             self.send_message(dest, callback=self.nw.log_message_result)
             self.nw.logger.log_msg_sent(self.id, dest)
             
         #one step closer to death..such is life
         self.ttl -= 1
+        if self.ttl == 0:
+            self.die()
         
         
     def handle_messages(self):
@@ -145,18 +156,30 @@ class Node:
     #  if a message is routing:
     #  do next hop and remeber the message for the next round
     
-        still_alive = []
-        for msg in self.messages:
+        #still_alive = []
+        #for msg in self.messages:
+        #    if msg.status == 'routing':
+        #        self.route_message(msg)
+        #        still_alive.append(msg)
+        #    if msg.status == 'arrived':
+        #        pass #log arrive here?       
+        #    if msg.status == 'failed':
+        #        pass #log fail here?
+        #print "before", len(self.messages)
+        current_messages = self.messages
+        self.messages = []
+        while len(current_messages):
+            msg = current_messages.pop()
             if msg.status == 'routing':
                 self.route_message(msg)
-                still_alive.append(msg)
+                self.messages.append(msg)
             if msg.status == 'arrived':
                 pass #log arrive here?       
             if msg.status == 'failed':
                 pass #log fail here?
-            
-        #only remember teh ones that are still going
-        self.messages = still_alive
+           
+
+        #print "after", len(self.messages)
             
     
     
@@ -201,7 +224,7 @@ class Node:
                 msg.arrive()
             else:
                 msg.fail()
-                current_node.fix_sucessor()
+                #current_node.fix_sucessor()
                 
             
         #we are not there yet, in this case we make a hop to the closest node the current one knows about
@@ -410,7 +433,7 @@ class Network:
         #keep taking stes to grows teh network using random joins until num_nodes are participating
         while len(self.nodes) < num_nodes:
             self.tick()
-            if random() < 0.1:
+            if random() < 0.3:
                 id = self.get_unique_id()
                 n = Node(id, self)
                 
@@ -431,7 +454,7 @@ class Network:
         
       
     def remove_node(self, id):
-       self.nodes[id].die()
+       #self.nodes[id].die()
        del self.nodes[id]
        self.logger.log_leave(id) 
 
@@ -451,7 +474,6 @@ class Network:
         if m.status == 'arrived':
             self.logger.log_msg_reached(m.src, m.dest, len(m.route))
         if m.status == 'failed':
-            #print "ogging failed"
             self.logger.log_msg_failed( m.src, m.dest, len(m.route), m.route[-1], m.dest)
       
       
@@ -469,15 +491,17 @@ class Network:
 
 
 
+
+
 if __name__ == "__main__":
     chord = Network()
     print "boot"
     chord.bootstrap(3)
     
     print "growing"
-    chord.grow(500)
+    chord.grow(NUM_NODES)
     
-    for i in range(400):
+    for i in range(LENGTH_OF_SIMULATION):
         chord.tick()
         chord.logger.update_state()
         if random() < CHURN_DIE:
@@ -491,4 +515,7 @@ if __name__ == "__main__":
         
         
     chord.logger.print_state()
-    print "DONE"
+
+    print "Churn rate (leave,die):",  CHURN_DIE,",", CHURN_JOIN
+    print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
+    print "Replication Mode:", REPLICATION_TYPE
