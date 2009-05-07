@@ -22,8 +22,8 @@ CHURN_RATE = 0.2
 
 #Working on
 REPLICATION_TYPE         ='delta'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
-DELTA_REPLICATION_K      = 4         #number of replicas K/2 into each direction
-NUM_RANDOM_REPLICAS      = NUM_BITS
+REPLICATION_K            = 16          #number of replicas K/2 into each direction\
+
 
 
 
@@ -116,7 +116,7 @@ class Node:
         
         # replication types:  'none', 'random', 'popularity', 'route_replication'
         self.replication_type = 'none'
-        self.replicas = {}
+        self.replicas = []
 
         
     def __str__(self):
@@ -241,12 +241,19 @@ class Node:
         
         if REPLICATION_TYPE == 'delta' and msg.type == 'lookup':
             key_index = self.nw.ids.index(current_node.id)
-            first = self.nw.ids[(key_index-(DELTA_REPLICATION_K/2)-1)%(len(self.nw.ids)-1)]
-            last  = self.nw.ids[(key_index+(DELTA_REPLICATION_K/2))%(len(self.nw.ids)-1)]
+            first = self.nw.ids[(key_index-(REPLICATION_K/2)-1)%(len(self.nw.ids)-1)]
+            last  = self.nw.ids[(key_index+(REPLICATION_K/2))%(len(self.nw.ids)-1)]
             if between(msg.dest, first, last):
                 NUM_REPLICAS +=1
                 msg.arrive()
                 return
+            
+        if REPLICATION_TYPE == 'random' and msg.type == 'lookup':
+            for repl_range in self.replicas:
+                if between(msg.dest, repl_range[0], repl_range[1]):
+                    NUM_REPLICAS +=1
+                    msg.arrive()
+                    return
         
         if (not current_node.fingers[0]):
             msg.fail('node doesnt have sucessor')
@@ -324,6 +331,19 @@ class Node:
         sucessor.notify(self.id)
         self.init_fingers()
         self.joined = True
+        if not self.nw.growing and REPLICATION_TYPE == 'random':
+            self.get_replicas()
+        
+
+    def get_replicas(self):
+        self.replicas = []
+        for i in range(REPLICATION_K):
+            repl = self.nw.random_node()
+            i=0
+            while not (self.nw.get_node(repl.fingers[0])) or i > 10:
+                repl = self.nw.random_node()
+                i+=1
+            self.replicas.append((repl.predec, repl.id+1))
 
     def init_fingers(self):
         for finger_index in reversed( range(len(self.fingers)) ): 
@@ -477,6 +497,10 @@ class Network:
                 
         
         self.growing = False
+        
+        if REPLICATION_TYPE == 'random':
+            for node in self.nodes.values():
+                node.get_replicas()
 
 
 
@@ -612,6 +636,6 @@ if __name__ == "__main__":
     print "Churn Type:", CHURN_TYPE
     print "Churn Rate:", CHURN_RATE, "  ATTACKER:", ATTACK_INTERVAL, ATTACK_SIZE
     print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
-    print "Replication Mode:", REPLICATION_TYPE, "K:",DELTA_REPLICATION_K, " Number of repicas found/used:", NUM_REPLICAS
+    print "Replication Mode:", REPLICATION_TYPE, "K:",REPLICATION_K, " Number of repicas found/used:", NUM_REPLICAS
     
     
