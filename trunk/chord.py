@@ -7,7 +7,7 @@ from chordLogger import *
 NUM_BITS                 = 16
 NUM_NODES                = 1024              #The number of nodes in teh network
 JOIN_LATENCY             = 10                #latency between growing and starting sim, also used for churn_type apprx: log(NUM_NODES)
-LENGTH_OF_SIMULATION     = 1000              #number of ticks to simulate
+LENGTH_OF_SIMULATION     = 2000              #number of ticks to simulate
 MESSAGE_RATE             = 0.2               #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
 CHURN_PROBABILITY        = 1.0/JOIN_LATENCY  #probability that churn will occur at all this tick
 MAX_CHURN_FRACTION       = 0.02              #max fraction of total number of nodes in the network that will join or leave
