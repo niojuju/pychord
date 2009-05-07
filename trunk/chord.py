@@ -5,12 +5,13 @@ from pprint import pprint
 from chordLogger import *
 
 
-NUM_NODES            = 1024     #The number of nodes in teh network
-LENGTH_OF_SIMULATION = 1000     #number of ticks to simulate
+NUM_NODES            = 1000     #The number of nodes in teh network
+LENGTH_OF_SIMULATION = 2000     #number of ticks to simulate
 MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
-CHURN_DIE            = .1       #fraction of how many nodes in teh entire network will die within CHURN_TIME ticks
-CHURN_JOIN           = .1       #fraction of how many nodes in teh entire network will join within CHURN_TIME ticks
-CHURN_TIME           = 1000       #CHURN rates/percentages are relative to this many ticks. eg. 0.02 churn and 50 churn_time means 2% of nodes every 20 ticks
+CHURN_RATE           = .5
+MESSAGE_TTL          = 20
+
+
 MAX_CONCURENT_JOIN   = 2       # max number of nodes join/leave in one tick
 MAX_CONCURENT_DIE    = 2       # max number of nodes join/leave in one tick
 STABILIZE_FREQ       = 0.1      #The frequency at which nodes will run the fix_fingers protocol
@@ -25,7 +26,7 @@ REPLICATION_TYPE     ='none'    # The type of replication used. options are:  'n
 #  returns true if x is strictly between i and j (x comes after i and before j, not equal to either i or j)
 #  also returns False if x is None or False
 def between(x, i, j):
-    if not x:
+    if (not x) or (not i) or (not j):
         return False
     
     if i <= j:
@@ -143,7 +144,7 @@ class Node:
         if random() < self.finger_fix_freq:
             self.fix_fingers()
             
-        if random() < MESSAGE_FREQ:
+        if random() < MESSAGE_FREQ and not self.nw.growing:
             dest = self.nw.random_node().id
             self.send_message(dest, callback=self.nw.log_message_result)
             self.nw.logger.log_msg_sent(self.id, dest)
@@ -173,6 +174,9 @@ class Node:
         self.messages = []
         while len(current_messages):
             msg = current_messages.pop()
+            if len(msg.route) > MESSAGE_TTL:
+                msg.fail()
+                
             if msg.status == 'routing':
                 self.route_message(msg)
                 self.messages.append(msg)
@@ -206,6 +210,7 @@ class Node:
         return m
     
     def route_message(self, msg):
+        global MESSAGE_TTL
     #This function is called every tick by each node for every message it started
     #It routes each message one step closer until it reaches the 'successor'.
     #Messages are rourted until their location = dest or the first node with id > dest.
@@ -214,7 +219,7 @@ class Node:
         current_node = self.nw.get_node(msg.route[-1])
         
         #maybe the node we are looking for doesnt exist in the network...the routing fails
-        if (not current_node) or (not current_node.fingers[0]) :
+        if (not current_node) or (not current_node.fingers[0]) or len(msg.route) > MESSAGE_TTL :
             msg.fail()
             #print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
             return False
@@ -222,7 +227,8 @@ class Node:
 
         #check whether the current node is immediate predecesor.  in this case the target is its successor
         if between(msg.dest, current_node.id, current_node.fingers[0]+1):
-            if self.nw.get_node(current_node.fingers[0]):
+            sucessor = self.nw.get_node(current_node.fingers[0])
+            if sucessor  :
                 msg.route_to(current_node.fingers[0])
                 msg.arrive()
             else:
@@ -236,23 +242,6 @@ class Node:
             msg.route_to(next_node_id)
             return next_node_id
         
-#we are not there yet, in this case we make a hop to the closest node the current one knows about
-        #else:
-        #    next_node_id = current_node.closest_preceding_finger(msg.dest)
-        #    if self.nw.get_node(next_node_id):
-        #        msg.route_to(next_node_id)
-        #        return next_node_id
-        #    else:
-        #        try:
-        #            #try all smaler fingers and sucessors before failing
-                    
-        #            fi = current_node.fingers.index(next_node_id)
-        #            current_node[fi] = current_node[fi-1]
-        #        except:
-        #            pass
-        #        msg.fail()
-                #pprint (self.nw.get_node(msg.route[-1]).fingers)
-         #       return False
         
         
         
@@ -502,15 +491,13 @@ class Network:
 
 #some probability to average the number of leaves/joins over CHURN_TIME rounds to be churn rate i.e. CHURN_JOIN/CHURN_DIE
 #calculates frequency of doing joins or not given that each round that does joins or leaves can do concurently e.g. MAX_JOINS of tehm
-AVERAGE_JOINS_PER_CHURN_ROUND = float(CHURN_JOIN)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME) #thats how many noes should join on average per CHURN_TIME rounds
-AVERAGE_JOINS_PER_ROUND = float(MAX_CONCURENT_JOIN)*0.5 #since we pick randomly from 0 to max_joins, woudl be different for other probability distribution
-CHANCE_OF_JOINS = AVERAGE_JOINS_PER_ROUND/AVERAGE_JOINS_PER_CHURN_ROUND
+#AVERAGE_JOINS_PER_CHURN_ROUND = float(CHURN_JOIN)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME) #thats how many noes should join on average per CHURN_TIME rounds
+#AVERAGE_JOINS_PER_ROUND = float(MAX_CONCURENT_JOIN)*0.5 #since we pick randomly from 0 to max_joins, woudl be different for other probability distribution
+#CHANCE_OF_JOINS = AVERAGE_JOINS_PER_ROUND/AVERAGE_JOINS_PER_CHURN_ROUND
 
-AVERAGE_DIE_PER_CHURN_ROUND = float(CHURN_DIE)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME)
-AVERAGE_DIES_PER_ROUND = float(MAX_CONCURENT_DIE)*0.5 
-CHANCE_OF_DIES = AVERAGE_DIES_PER_ROUND/AVERAGE_DIE_PER_CHURN_ROUND
-
-
+#AVERAGE_DIE_PER_CHURN_ROUND = float(CHURN_DIE)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME)
+#AVERAGE_DIES_PER_ROUND = float(MAX_CONCURENT_DIE)*0.5 
+#CHANCE_OF_DIES = AVERAGE_DIES_PER_ROUND/AVERAGE_DIE_PER_CHURN_ROUND
 
 if __name__ == "__main__":
     chord = Network()
@@ -525,31 +512,27 @@ if __name__ == "__main__":
         chord.tick()
         chord.logger.update_state()
 
-        if random() > CHANCE_OF_DIES:
-            
-            num_leaves =  int(random()*MAX_CONCURENT_DIE)
-            for i in range(num_leaves):
-                print "node leaving"
+        if random() < CHURN_RATE*0.5:
+            if random() < 0.5:
+                chord.remove_random()
+            if random() < 0.5:
                 chord.remove_random()
 
-
-        if random() > CHANCE_OF_JOINS:
-            
-            num_joins =  int(random()*MAX_CONCURENT_JOIN)
-            for i in range(num_joins):
-                print "node joining"
+        if random() < CHURN_RATE*0.5:
+            if random() < 0.5:
+                chord.add_random_node()
+            if random() < 0.5:
                 chord.add_random_node()
             
 
     
-                
-        if i%50 ==0:
-            print i
+
+        print 'tick:',i
         
         
     chord.logger.print_state()
 
-    print "Churn rate (leave,die):",  CHURN_DIE,",", CHURN_JOIN
+    print "Churn rate (leave,die):",  CHURN_RATE
     print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
     print "Replication Mode:", REPLICATION_TYPE
     

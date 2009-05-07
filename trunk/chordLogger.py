@@ -50,13 +50,14 @@ class chordLogger:
         
     def log(self, logString):
        # to console
-       print logString 
+       #print logString 
        # to viz
        #if VISUALIZE is True: 
        #    print "[chordLogger] Will write to viz: ", logString 
        # to file
        #if LOG_TO_FILE is True: 
        #    print "[chordLogger] Will write to file: ", logString 
+        pass
 
     def update_state(self):
         #""" Updates internal state variables a.k.a. Metrics collected """
@@ -102,11 +103,11 @@ class chordLogger:
    
     def log_join(self, nodeID):
        self.total_joins += 1
-       #self.log("Node Join: " + str(nodeID))
+       self.log("Node Join: " + str(nodeID))
        
     def log_leave(self, nodeID):
        self.total_leaves += 1
-       #self.log("Node Leave: " + str(nodeID))
+       self.log("Node Leave: " + str(nodeID))
 
     def log_fail(self, nodeID):
        self.total_fails += 1
