@@ -612,6 +612,6 @@ if __name__ == "__main__":
     print "Churn Type:", CHURN_TYPE
     print "Churn Rate:", CHURN_RATE, "  ATTACKER:", ATTACK_INTERVAL, ATTACK_SIZE
     print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
-    print "Replication Mode:", REPLICATION_TYPE, "K:",DELTA_REPLICATION_RANGE*2, " Number of repicas found/used:", NUM_REPLICAS
+    print "Replication Mode:", REPLICATION_TYPE, "K:",DELTA_REPLICATION_K, " Number of repicas found/used:", NUM_REPLICAS
     
     
