@@ -5,23 +5,23 @@ from pprint import pprint
 from chordLogger import *
 
 NUM_BITS                 = 16
-NUM_NODES                = 1024              #The number of nodes in teh network
-JOIN_LATENCY             = 10                #latency between growing and starting sim, also used for churn_type apprx: log(NUM_NODES)
-LENGTH_OF_SIMULATION     = 2000              #number of ticks to simulate
-MESSAGE_RATE             = 0.2               #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
+NUM_NODES                = 1024               #The number of nodes in teh network
+JOIN_LATENCY             = 10                 #latency between growing and starting sim, also used for churn_type apprx: log(NUM_NODES)
+LENGTH_OF_SIMULATION     = 2000               #number of ticks to simulate
+MESSAGE_RATE             = 0.2                #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
 #CHURN_PROBABILITY        = 1.0/JOIN_LATENCY  #probability that churn will occur at all this tick
 #MAX_CHURN_FRACTION       = 0.02              #max fraction of total number of nodes in the network that will join or leave
-CHURN_TYPE               = 'random'          #option are 'random', 'adversarial' or 'all'
-ATTACK_INTERVAL          = 100               #attacker will atack evry ATTACK_RATE number of ticks
-ATTACK_SIZE              = 1.7*10              #number of cocncurent, continuous nodes failed by the attacker 
+CHURN_TYPE               = 'adversarial'           #option are 'random', 'adversarial' or 'all'
+ATTACK_INTERVAL          = 200                #attacker will atack evry ATTACK_RATE number of ticks
+ATTACK_SIZE              = 5*10             #number of cocncurent, continuous nodes failed by the attacker 
 MESSAGE_TTL              = 30
 STABILIZE_FREQ           = 0.05      #The frequency at which nodes will run the fix_fingers protocol
 FIX_FINGER_FREQ          = 0.05      #The frequency at which nodes will run the stabilize protocol
-RANDOM_ROUTING_FREQ      = 0.3       #The frequency at which nodes will route a message to a less than optimal finger
-CHURN_RATE = 0.2
+RANDOM_ROUTING_FREQ      = 0.4       #The frequency at which nodes will route a message to a less than optimal finger
+CHURN_RATE = 2
 
 #Working on
-REPLICATION_TYPE         ='delta'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
+REPLICATION_TYPE         ='none'      # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
 REPLICATION_K            = 16          #number of replicas K/2 into each direction\
 
 
