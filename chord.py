@@ -22,7 +22,7 @@ CHURN_RATE = 0.2
 
 #Working on
 REPLICATION_TYPE         ='delta'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
-DELTA_REPLICATION_K      = 8         #number of replicas K/2 into each direction
+DELTA_REPLICATION_K      = 2         #number of replicas K/2 into each direction
 NUM_RANDOM_REPLICAS      = NUM_BITS
 
 
@@ -241,9 +241,9 @@ class Node:
         
         if REPLICATION_TYPE == 'delta' and msg.type == 'lookup':
             key_index = self.nw.ids.index(current_node.id)
-            first = self.nw.ids[(key_index-(DELTA_REPLICATION_K/2)-1)%(len(self.nw.ids)-1)]
-            last  = self.nw.ids[(key_index+(DELTA_REPLICATION_K/2))%(len(self.nw.ids)-1)]
-            if between(msg.dest, first, last):
+            #first = self.nw.ids[(key_index-(DELTA_REPLICATION_K/2)-1)%(len(self.nw.ids)-1)]
+            last  = self.nw.ids[(key_index+(DELTA_REPLICATION_K))%(len(self.nw.ids)-1)]
+            if between(msg.dest, key_index, last):
                 NUM_REPLICAS +=1
                 msg.arrive()
                 return
