@@ -5,15 +5,16 @@ from pprint import pprint
 from chordLogger import *
 
 
-NUM_NODES            = 1000     #The number of nodes in teh network
+NUM_NODES            = 1024     #The number of nodes in teh network
 LENGTH_OF_SIMULATION = 2000     #number of ticks to simulate
 MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
 CHURN_RATE           = .5
+CHURN_TYPE           = 'both'   #option are 'random', 'adversarial' or 'all'
+ATTACK_RATE          = 200      #attacker will atack evry ATTACK_RATE number of ticks
+ATTACK_SIZE          = 30
 MESSAGE_TTL          = 20
-
-
-MAX_CONCURENT_JOIN   = 2       # max number of nodes join/leave in one tick
-MAX_CONCURENT_DIE    = 2       # max number of nodes join/leave in one tick
+MAX_CONCURENT_JOIN   = 2        # max number of nodes join/leave in one tick
+MAX_CONCURENT_DIE    = 2        # max number of nodes join/leave in one tick
 STABILIZE_FREQ       = 0.1      #The frequency at which nodes will run the fix_fingers protocol
 FIX_FINGER_FREQ      = 0.1      #The frequency at which nodes will run the stabilize protocol
 RANDOM_ROUTING_FREQ  = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
@@ -145,7 +146,7 @@ class Node:
             self.fix_fingers()
             
         if random() < MESSAGE_FREQ and not self.nw.growing:
-            dest = self.nw.random_node().id
+            dest = randint(0,2**NUM_BITS-1)#self.nw.random_node().id
             self.send_message(dest, callback=self.nw.log_message_result)
             self.nw.logger.log_msg_sent(self.id, dest)
             
@@ -438,6 +439,8 @@ class Network:
         
         self.growing = False
 
+
+
     def add_node(self, node, log=True):
         node.init_join(self.random_node())
         self.nodes[node.id] = node
@@ -456,13 +459,22 @@ class Network:
        del self.nodes[id]
        self.logger.log_leave(id)
        
-
-
     def remove_random(self):
         node = self.random_node()
         #while not node.joined:
         node = self.random_node()
         self.remove_node(node.id)
+       
+    def adversary_attack(self):
+        node_ids = self.nodes.keys()
+        node_ids.sort()
+        start_index = int(random()*(len(node_ids)-1))
+        for i in range(ATTACK_SIZE):
+            id = node_ids[(start_index+i)%(len(node_ids)-1)]
+            self.remove_node(id)
+        
+
+
         
 
     def add_messages(self, messages):
@@ -507,22 +519,29 @@ if __name__ == "__main__":
     print "growing"
     chord.grow(NUM_NODES)
     chord.logger.init_size(len(chord.nodes))
-    churn_round = 0
+    attack_round = 0
     for i in range(LENGTH_OF_SIMULATION):
         chord.tick()
         chord.logger.update_state()
 
-        if random() < CHURN_RATE*0.5:
-            if random() < 0.5:
-                chord.remove_random()
-            if random() < 0.5:
-                chord.remove_random()
-
-        if random() < CHURN_RATE*0.5:
-            if random() < 0.5:
-                chord.add_random_node()
-            if random() < 0.5:
-                chord.add_random_node()
+        if CHURN_TYPE == 'random' or CHURN_TYPE == 'all':
+            if random() < CHURN_RATE*0.5:
+                if random() < 0.5:
+                    chord.remove_random()
+                if random() < 0.5:
+                    chord.remove_random()
+    
+            if random() < CHURN_RATE*0.5:
+                if random() < 0.5:
+                    chord.add_random_node()
+                if random() < 0.5:
+                    chord.add_random_node()
+        elif CHURN_TYPE == 'adversarial' or CHURN_TYPE == 'all':
+            if attack_round == ATTACK_RATE:
+                chord.adversary_attack()
+                attack_round = 0
+            else:
+                attack_round += 1
             
 
     
