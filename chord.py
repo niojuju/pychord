@@ -64,7 +64,7 @@ class Message:
         self.status = 'failed'
         if self.callback and self.type == 'lookup':
             self.callback(self)
-            print reason
+            #print reason
         
     def arrive(self):
         #print self.type,"arrived", self.src, self.dest
