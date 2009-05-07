@@ -1,26 +1,25 @@
-NUM_BITS = 16 
+ 
 
 from random import randint, random, choice, paretovariate 
 from pprint import pprint
 from chordLogger import *
 
-
+NUM_BITS                 = 16
 NUM_NODES                = 1024              #The number of nodes in teh network
 JOIN_LATENCY             = 10                #latency between growing and starting sim, also used for churn_type apprx: log(NUM_NODES)
-LENGTH_OF_SIMULATION     = 2000              #number of ticks to simulate
+LENGTH_OF_SIMULATION     = 1000              #number of ticks to simulate
 MESSAGE_RATE             = 0.2               #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
 CHURN_PROBABILITY        = 1.0/JOIN_LATENCY  #probability that churn will occur at all this tick
 MAX_CHURN_FRACTION       = 0.02              #max fraction of total number of nodes in the network that will join or leave
-CHURN_TYPE               = 'random'            #option are 'random', 'adversarial' or 'all'
+CHURN_TYPE               = 'random'          #option are 'random', 'adversarial' or 'all'
 ATTACK_INTERVAL          = 200               #attacker will atack evry ATTACK_RATE number of ticks
-ATTACK_SIZE              = 20                #number of cocncurent, continuous nodes failed by the attacker 
-MESSAGE_TTL              = 20                
-MAX_CONCURENT_JOIN       = 2        # max number of nodes join/leave in one tick
-MAX_CONCURENT_DIE        = 2        # max number of nodes join/leave in one tick
+ATTACK_SIZE              = 2*10              #number of cocncurent, continuous nodes failed by the attacker 
+MESSAGE_TTL              = 30                
+
 STABILIZE_FREQ           = 0.1      #The frequency at which nodes will run the fix_fingers protocol
 FIX_FINGER_FREQ          = 0.1      #The frequency at which nodes will run the stabilize protocol
 RANDOM_ROUTING_FREQ      = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
-
+CHURN_RATE = 0.2
 
 #Working on
 REPLICATION_TYPE         ='none'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
@@ -44,7 +43,7 @@ def between(x, i, j):
        return x > i or x<j
 
 message_ids = 0
-FAILS = 0
+
 
 class Message:
     
@@ -57,21 +56,16 @@ class Message:
         self.callback = callback
         self.data = data 
         self.status = 'routing'
-        self.id = message_ids +1
+        self.id = message_ids 
         message_ids += 1
         
-        replicas = {}
-        
-        #if REPLICATION_TYPE == 'random':
-        #    for i in range()
         
         
-    def fail(self):
-        global FAILS
+    def fail(self, reason='no reason given'):
         self.status = 'failed'
         if self.callback and self.type == 'lookup':
             self.callback(self)
-            #print "FAILED MESSAGE:", self.src, '->', self.dest, self.route, self.type
+            print reason
         
     def arrive(self):
         #print self.type,"arrived", self.src, self.dest
@@ -82,11 +76,10 @@ class Message:
 
     def route_to(self, node_id):
         self.route.append(node_id)
-        if len(self.route)>3 and self.route[-1] == self.route[-2] == self.route[-3]: #were stuck..failed message
-            self.fail()
+        
             
 
-watching = {}
+
 
 class Node:
     
@@ -125,9 +118,7 @@ class Node:
         # replication types:  'none', 'random', 'popularity', 'route_replication'
         self.replication_type = 'none'
         self.replicas = {}
-        
-        
-        self.entry = -1
+
         
     def __str__(self):
     #so that we can print or cast the node to a string
@@ -144,14 +135,18 @@ class Node:
     #is called at each timestep of the network
     #performs one round of actions
         
+        #unless we have succesfully joined teh network, we cant do maintanance
+        if self.fingers[0] == None:
+            return
+        #if not self.nw.get_node(self.fingers[0]):
+            #self.fix_sucessor()
+        
+        
         #handle this nodes messages 
         self.handle_messages()
             
-        #unless we have succesfully joined teh network, we cant do maintanance
-        if not self.fingers[0]:
-            return
-        if not self.nw.get_node(self.fingers[0]):
-            self.fix_sucessor()
+        
+
             
         #perform some maintanance
         if random() < self.stabilize_freq:
@@ -160,14 +155,15 @@ class Node:
             self.fix_fingers()
             
         if random() < MESSAGE_RATE and not self.nw.growing:
-            dest = randint(0,2**NUM_BITS-1)#self.nw.random_node().id
+            #dest = randint(0,2**NUM_BITS-1)#self.nw.random_node().id
+            dest = self.nw.random_node().id
             self.send_message(dest, callback=self.nw.log_message_result)
             self.nw.logger.log_msg_sent(self.id, dest)
             
         #one step closer to death..such is life
         self.ttl -= 1
-        if self.ttl == 0:
-            self.die()
+        #if self.ttl == 0:
+        #    self.die()
         
         
     def handle_messages(self):
@@ -187,10 +183,12 @@ class Node:
         #print "before", len(self.messages)
         current_messages = self.messages
         self.messages = []
-        while len(current_messages):
+        num_messages_routed = 0
+        while len(current_messages) and num_messages_routed < 50:
             msg = current_messages.pop()
+            num_messages_routed += 1
             if len(msg.route) > MESSAGE_TTL:
-                msg.fail()
+                msg.fail('message timed out')
                 
             if msg.status == 'routing':
                 self.route_message(msg)
@@ -234,11 +232,19 @@ class Node:
         current_node = self.nw.get_node(msg.route[-1])
         
         #maybe the node we are looking for doesnt exist in the network...the routing fails
-        if (not current_node) or (not current_node.fingers[0]) or len(msg.route) > MESSAGE_TTL :
-            msg.fail()
+        if (not current_node) :
+            msg.fail('node died between ticks')
             #print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
             return False
-            
+        
+        if (not current_node.fingers[0]):
+            msg.fail('node doesnt have sucessor')
+            #print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
+            return False
+        if len(msg.route) > MESSAGE_TTL :
+            msg.fail('message timed out')
+            #print " FAIL  :", msg.route, "from:", msg.src, " to:", msg.dest, msg.type
+            return False
 
         #check whether the current node is immediate predecesor.  in this case the target is its successor
         if between(msg.dest, current_node.id, current_node.fingers[0]+1):
@@ -247,8 +253,8 @@ class Node:
                 msg.route_to(current_node.fingers[0])
                 msg.arrive()
             else:
-                msg.fail()
-                #current_node.fix_sucessor()
+                msg.fail('sucessor pointer failed')
+                current_node.fix_sucessor()
                 
             
         #we are not there yet, in this case we make a hop to the closest node the current one knows about
@@ -268,15 +274,19 @@ class Node:
     #Returns this nodes ID if no preceeding finger is known
     
         for finger in reversed(self.fingers): 
-            if between(finger, self.id , id): #and self.nw.get_node(finger):
+            if between(finger, self.id , id):
                 if not self.nw.get_node(finger):
                     self.fix_finger(self.fingers.index(finger))
-
+                    continue
                 #this step will be skipped random;y sometimes
-                if random() > self.random_routing_freq:
+                if random() > self.random_routing_freq: #otherwise keep going
                     return finger
                 
-        
+        for finger in self.fingers: 
+            if self.nw.get_node(finger):
+                return finger
+            
+        print "THATS BAD"
         return self.id 
     
     
@@ -320,14 +330,14 @@ class Node:
     ################################################################################################
     """
     def fix_fingers(self):
-        finger_index = randint(0,NUM_BITS-1)
-        self.fix_finger(finger_index)
-        #for i in range(NUM_BITS):
-        #    if not self.nw.get_node(self.fingers[i]):
-        #        self.fix_finger(i, foreign_find=True)
+        #finger_index = randint(0,NUM_BITS-1)
+        #self.fix_finger(finger_index)
+        for i in range(NUM_BITS):
+            if not self.nw.get_node(self.fingers[i]):
+                self.fix_finger(i)
 
         
-    def fix_finger(self, index, foreign_find=False):
+    def fix_finger(self, index):
         ideal_finger = (self.id + 2**(index)) % 2**NUM_BITS
         self.send_message(ideal_finger, type='finger', callback=self.finger_response, data=index)
  
@@ -544,7 +554,7 @@ if __name__ == "__main__":
 
         
 
-        """
+        
         if CHURN_TYPE == 'random' or CHURN_TYPE == 'all':
             if random() < CHURN_RATE*0.5:
                 if random() < 0.5:
@@ -558,15 +568,15 @@ if __name__ == "__main__":
                 if random() < 0.5:
                     chord.add_random_node()
         """
-
+        
         if random() < CHURN_PROBABILITY:
-            num_fails = random()*MAX_CHURN_FRACTION*NUM_NODES
-            num_joins = random()*MAX_CHURN_FRACTION*NUM_NODES
-            for i in range(num_fails):
+            num_fails = random()*MAX_CHURN_FRACTION*NUM_NODES/JOIN_LATENCY
+            num_joins = random()*MAX_CHURN_FRACTION*NUM_NODES/JOIN_LATENCY
+            for i in range(int(num_fails)):
                 chord.remove_random()
-            for i in range(num_joins):
+            for i in range(int(num_joins)):
                 chord.add_random_node()
-            
+        
 
         
         if CHURN_TYPE == 'adversarial' or CHURN_TYPE == 'all':
@@ -575,7 +585,7 @@ if __name__ == "__main__":
                 attack_round = 0
             else:
                 attack_round += 1
-            
+        """
 
     
 
