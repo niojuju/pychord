@@ -46,6 +46,7 @@ class chordLogger:
         self.current_nodes_in_network = 0
         self.avg_hops_to_reach = 0
         self.avg_hops_before_failure = 0
+        self.initial_size = 0
         
     def log(self, logString):
        # to console
@@ -59,7 +60,7 @@ class chordLogger:
 
     def update_state(self):
         #""" Updates internal state variables a.k.a. Metrics collected """
-        self.current_nodes_in_network = self.total_joins - self.total_leaves - self.total_fails
+        self.current_nodes_in_network = self.initial_size + self.total_joins - self.total_leaves - self.total_fails
         if self.total_msgs_reached != 0:
             self.avg_hops_to_reach = float(self.total_hops_taken_for_reach) / float(self.total_msgs_reached)
         if self.total_msgs_failed != 0:
@@ -95,6 +96,9 @@ class chordLogger:
     - log_msg_failed(srcID, destID, hops, failed_at, trying_to_reach)
     - log_message_route -- not sure
     """
+   
+    def init_size(self, size):
+        self.initial_size = size
    
     def log_join(self, nodeID):
        self.total_joins += 1

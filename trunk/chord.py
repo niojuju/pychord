@@ -5,11 +5,11 @@ from pprint import pprint
 from chordLogger import *
 
 
-NUM_NODES            = 1000     #The number of nodes in teh network
+NUM_NODES            = 1024     #The number of nodes in teh network
 LENGTH_OF_SIMULATION = 1000     #number of ticks to simulate
 MESSAGE_FREQ         = 0.2      #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
-CHURN_DIE            = 0.02     #The frequency at which nodes will leave the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
-CHURN_JOIN           = 0.02     #The frequency at which nodes will join the network (a fraction of ticks, i.e. 0.1 = approx every 10th tick)
+CHURN_DIE            = .1       #fraction of how many nodes in teh entire network will die within CHURN_TIME ticks
+CHURN_JOIN           = .1       #fraction of how many nodes in teh entire network will join within CHURN_TIME ticks
 CHURN_TIME           = 1000       #CHURN rates/percentages are relative to this many ticks. eg. 0.02 churn and 50 churn_time means 2% of nodes every 20 ticks
 MAX_CONCURENT_JOIN   = 2       # max number of nodes join/leave in one tick
 MAX_CONCURENT_DIE    = 2       # max number of nodes join/leave in one tick
@@ -298,6 +298,7 @@ class Node:
         self.sync_backups()
         sucessor.notify(self.id)
         self.init_fingers()
+        self.joined = True
 
     def init_fingers(self):
         for finger_index in reversed( range(len(self.fingers)) ): 
@@ -306,7 +307,7 @@ class Node:
     def finger_response(self, msg):
         self.fingers[msg.data] = msg.route[-1]
         if msg.data == 0:
-            self.joined = True
+            
             self.sync_backups()
     
     
@@ -365,7 +366,7 @@ class Node:
         
         
         
-
+LEAVES = 0
         
 class Network:
     
@@ -434,21 +435,25 @@ class Network:
     def grow(self, num_nodes):
         self.growing = True
         #keep taking stes to grows teh network using random joins until num_nodes are participating
+        i = 0
         while len(self.nodes) < num_nodes:
             self.tick()
             if random() < 0.3:
                 id = self.get_unique_id()
                 n = Node(id, self)
                 
-                self.add_node(n) #also returns a hook for the node to join at
+                self.add_node(n, log=False) #also returns a hook for the node to join at
+                i+=1
+                if i%50: print "current size:", i
                 
         
         self.growing = False
 
-    def add_node(self, node):
+    def add_node(self, node, log=True):
         node.init_join(self.random_node())
         self.nodes[node.id] = node
-        self.logger.log_join(node.id)
+        if log:
+            self.logger.log_join(node.id)
         
     def add_random_node(self):
         n = Node(self.get_unique_id(), self)
@@ -457,15 +462,18 @@ class Network:
         
       
     def remove_node(self, id):
+       
        #self.nodes[id].die()
        del self.nodes[id]
-       self.logger.log_leave(id) 
+       self.logger.log_leave(id)
+       
 
 
     def remove_random(self):
         node = self.random_node()
-        if node.ttl < -20:
-            self.remove_node(node.id)
+        #while not node.joined:
+        node = self.random_node()
+        self.remove_node(node.id)
         
 
     def add_messages(self, messages):
@@ -494,13 +502,14 @@ class Network:
 
 #some probability to average the number of leaves/joins over CHURN_TIME rounds to be churn rate i.e. CHURN_JOIN/CHURN_DIE
 #calculates frequency of doing joins or not given that each round that does joins or leaves can do concurently e.g. MAX_JOINS of tehm
-AVERAGE_JOINS_PER_CHURN_ROUND = float(CHURN_JOIN)*NUM_NODES #thats how many noes should join on average per CHURN_TIME rounds
+AVERAGE_JOINS_PER_CHURN_ROUND = float(CHURN_JOIN)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME) #thats how many noes should join on average per CHURN_TIME rounds
 AVERAGE_JOINS_PER_ROUND = float(MAX_CONCURENT_JOIN)*0.5 #since we pick randomly from 0 to max_joins, woudl be different for other probability distribution
 CHANCE_OF_JOINS = AVERAGE_JOINS_PER_ROUND/AVERAGE_JOINS_PER_CHURN_ROUND
 
-AVERAGE_DIE_PER_CHURN_ROUND = float(CHURN_DIE)*NUM_NODES 
+AVERAGE_DIE_PER_CHURN_ROUND = float(CHURN_DIE)*NUM_NODES *LENGTH_OF_SIMULATION/float(CHURN_TIME)
 AVERAGE_DIES_PER_ROUND = float(MAX_CONCURENT_DIE)*0.5 
-CHANCE_OF_DIES = AVERAGE_DIES_PER_ROUND/AVERAGE_JOINS_PER_CHURN_ROUND
+CHANCE_OF_DIES = AVERAGE_DIES_PER_ROUND/AVERAGE_DIE_PER_CHURN_ROUND
+
 
 
 if __name__ == "__main__":
@@ -510,24 +519,28 @@ if __name__ == "__main__":
     
     print "growing"
     chord.grow(NUM_NODES)
+    chord.logger.init_size(len(chord.nodes))
     churn_round = 0
     for i in range(LENGTH_OF_SIMULATION):
         chord.tick()
         chord.logger.update_state()
 
-        if random() < CHANCE_OF_JOINS:
+        if random() > CHANCE_OF_DIES:
+            
+            num_leaves =  int(random()*MAX_CONCURENT_DIE)
+            for i in range(num_leaves):
+                print "node leaving"
+                chord.remove_random()
+
+
+        if random() > CHANCE_OF_JOINS:
             
             num_joins =  int(random()*MAX_CONCURENT_JOIN)
             for i in range(num_joins):
                 print "node joining"
                 chord.add_random_node()
             
-        if random() < CHANCE_OF_DIES:
-            
-            num_leaves =  int(random()*MAX_CONCURENT_DIE)
-            for i in range(num_leaves):
-                print "node leaving"
-                chord.remove_random()
+
     
                 
         if i%50 ==0:
@@ -539,3 +552,4 @@ if __name__ == "__main__":
     print "Churn rate (leave,die):",  CHURN_DIE,",", CHURN_JOIN
     print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
     print "Replication Mode:", REPLICATION_TYPE
+    
