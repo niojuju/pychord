@@ -9,21 +9,20 @@ NUM_NODES                = 1024              #The number of nodes in teh network
 JOIN_LATENCY             = 10                #latency between growing and starting sim, also used for churn_type apprx: log(NUM_NODES)
 LENGTH_OF_SIMULATION     = 2000              #number of ticks to simulate
 MESSAGE_RATE             = 0.2               #The frequency at which nodes send messages/lookups. i.e 20% that a node sends a new message each round
-CHURN_PROBABILITY        = 1.0/JOIN_LATENCY  #probability that churn will occur at all this tick
-MAX_CHURN_FRACTION       = 0.02              #max fraction of total number of nodes in the network that will join or leave
+#CHURN_PROBABILITY        = 1.0/JOIN_LATENCY  #probability that churn will occur at all this tick
+#MAX_CHURN_FRACTION       = 0.02              #max fraction of total number of nodes in the network that will join or leave
 CHURN_TYPE               = 'random'          #option are 'random', 'adversarial' or 'all'
-ATTACK_INTERVAL          = 200               #attacker will atack evry ATTACK_RATE number of ticks
-ATTACK_SIZE              = 2*10              #number of cocncurent, continuous nodes failed by the attacker 
-MESSAGE_TTL              = 30                
-
-STABILIZE_FREQ           = 0.1      #The frequency at which nodes will run the fix_fingers protocol
-FIX_FINGER_FREQ          = 0.1      #The frequency at which nodes will run the stabilize protocol
+ATTACK_INTERVAL          = 100               #attacker will atack evry ATTACK_RATE number of ticks
+ATTACK_SIZE              = 1.7*10              #number of cocncurent, continuous nodes failed by the attacker 
+MESSAGE_TTL              = 30
+STABILIZE_FREQ           = 0.05      #The frequency at which nodes will run the fix_fingers protocol
+FIX_FINGER_FREQ          = 0.05      #The frequency at which nodes will run the stabilize protocol
 RANDOM_ROUTING_FREQ      = 0.0      #The frequency at which nodes will route a message to a less than optimal finger
 CHURN_RATE = 0.2
 
 #Working on
-REPLICATION_TYPE         ='none'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
-DELTA_REPLICATION_RANGE  = 10
+REPLICATION_TYPE         ='delta'    # The type of replication used. options are:  'none', 'random', 'delta', 'popularity'
+DELTA_REPLICATION_RANGE  = 16
 NUM_RANDOM_REPLICAS      = NUM_BITS
 
 
@@ -43,7 +42,7 @@ def between(x, i, j):
        return x > i or x<j
 
 message_ids = 0
-
+NUM_REPLICAS = 0
 
 class Message:
     
@@ -223,10 +222,17 @@ class Node:
         return m
     
     def route_message(self, msg):
-        global MESSAGE_TTL
+        global MESSAGE_TTL, NUM_REPLICAS
     #This function is called every tick by each node for every message it started
     #It routes each message one step closer until it reaches the 'successor'.
     #Messages are rourted until their location = dest or the first node with id > dest.
+        
+        if REPLICATION_TYPE == 'delta':
+            if msg.type=='lookup' and abs(msg.dest - self.id) < DELTA_REPLICATION_RANGE:
+                print "found replica (delta=",abs(msg.dest - self.id),")!"
+                NUM_REPLICAS += 1
+                msg.arrive()
+                
         
         #get the node our message is currently at
         current_node = self.nw.get_node(msg.route[-1])
@@ -577,7 +583,7 @@ if __name__ == "__main__":
             for i in range(int(num_joins)):
                 chord.add_random_node()
         
-
+        """
         
         if CHURN_TYPE == 'adversarial' or CHURN_TYPE == 'all':
             if attack_round == ATTACK_INTERVAL:
@@ -585,7 +591,7 @@ if __name__ == "__main__":
                 attack_round = 0
             else:
                 attack_round += 1
-        """
+        
 
     
 
@@ -594,7 +600,9 @@ if __name__ == "__main__":
         
     chord.logger.print_state()
 
-    print "Max Churn Fraction:",  MAX_CHURN_FRACTION, "  Churn Probability:", CHURN_PROBABILITY
+    print "Churn Type:", CHURN_TYPE
+    print "Churn Rate:", CHURN_RATE, "  ATTACKER:", ATTACK_INTERVAL, ATTACK_SIZE
     print "Random Routing Frequency:",  RANDOM_ROUTING_FREQ
-    print "Replication Mode:", REPLICATION_TYPE
+    print "Replication Mode:", REPLICATION_TYPE, " Number of repicas found/used:", NUM_REPLICAS
+    
     
