@@ -1,0 +1,1 @@
+a chord simulator and visualizer written in python
